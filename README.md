@@ -6,6 +6,7 @@ Purpose
 
 Platform9 Express CLI
 
+A CLI for Platform9 Express
 
 Usage
 -----
