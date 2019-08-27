@@ -170,6 +170,9 @@ def create():
         
         filename = name + '.conf'
         shutil.copyfile(dir_path + 'express.conf', dir_path + filename)
+    
+    else:
+       click.echo('There are no Platform9 Express configuraitons created')
 
     prompts = {}
     prompts['config_name'] = click.prompt('Config name', type=str)
