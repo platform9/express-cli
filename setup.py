@@ -57,7 +57,7 @@ setup(
     ],
     keywords = 'cli',
     packages = find_packages(exclude=['docs', 'tests*']),
-    install_requires = ['Click', 'docker'],
+    install_requires = ['Click', 'prettytable'],
     extras_require = {
         'test': ['coverage', 'pytest', 'pytest-cov'],
     },
