@@ -159,6 +159,7 @@ def create():
     path = home + '/pf9/'
     dir_path = path + 'pf9-express/config/'
     
+
     if os.path.exists(dir_path + 'express.conf'):
         with open(dir_path + 'express.conf', 'r') as current:
             lines = current.readlines()
