@@ -159,6 +159,7 @@ def create():
     path = home + '/pf9/'
     dir_path = path + 'pf9-express/config/'
     
+
     if os.path.exists(dir_path + 'express.conf'):
         with open(dir_path + 'express.conf', 'r') as current:
             lines = current.readlines()
@@ -170,9 +171,6 @@ def create():
         
         filename = name + '.conf'
         shutil.copyfile(dir_path + 'express.conf', dir_path + filename)
-    
-    else:
-       click.echo('There are no Platform9 Express configuraitons created')
 
     prompts = {}
     prompts['config_name'] = click.prompt('Config name', type=str)
@@ -215,32 +213,36 @@ def list():
     path = home + '/pf9/'
     dir_path = path + 'pf9-express/config/'
 
-    count = 1
-    result = PrettyTable()
-    result.field_names = ["#","Active", "Conf", "Management Plane", "Region"]
-    files = [f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))]
+    if os.path.exists(dir_path):
+        count = 1
+        result = PrettyTable()
+        result.field_names = ["#","Active", "Conf", "Management Plane", "Region"]
+        files = [f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))]
 
-    for f in files:
-        active = False
-        if f == 'express.conf':
-            active = True
-        with open(dir_path + f, 'r') as data:
-            for line in data:
-                line = line.strip()
-                if 'config_name|' in line:
-                    name = line.replace('config_name|','')
-                if 'du_url' in line:
-                    du_url = line.replace('du_url|https://','')
-                if 'os_region' in line:
-                    os_region = line.replace('os_region|','')
-            data.close()
-            if active:
-                result.add_row([count,'*',name, du_url, os_region])
-            else:
-                result.add_row([count,' ',name, du_url, os_region])
-        count = count + 1
-    
-    print result
+        for f in files:
+            active = False
+            if f == 'express.conf':
+                active = True
+            with open(dir_path + f, 'r') as data:
+                for line in data:
+                    line = line.strip()
+                    if 'config_name|' in line:
+                        name = line.replace('config_name|','')
+                    if 'du_url' in line:
+                        du_url = line.replace('du_url|https://','')
+                    if 'os_region' in line:
+                        os_region = line.replace('os_region|','')
+                data.close()
+                if active:
+                    result.add_row([count,'*',name, du_url, os_region])
+                else:
+                    result.add_row([count,' ',name, du_url, os_region])
+            count = count + 1
+        
+        print result
+
+    else:
+        click.echo('No Platform9 Express configs exist')
 
 
 @config.command('activate')
