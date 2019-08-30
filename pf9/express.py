@@ -157,7 +157,7 @@ def manage_dns_resolvers(ctx, param, man_resolvers):
     else:
         ctx.params['dns_resolver_1'] = "8.8.8.8"
         ctx.params['dns_resolver_2'] = "8.8.4.4"
-    return ctx
+    return man_resolvers 
 
 @config.command('create')
 @click.option('--config_name', '--name', required=True, prompt='Config name')
@@ -168,8 +168,8 @@ def manage_dns_resolvers(ctx, param, man_resolvers):
 @click.option('--os_tenant', required=True, prompt='Platform9 tenant', default='service')
 @click.option('--proxy_url', required=True, prompt='Proxy url for internet access', default='-')
 @click.option('--manage_hostname', required=True, prompt='Have Platform9 Express manage hostnames', default=False)
-@click.option('--dns_resolver_1', prompt='Enter DNS resolver', is_eager=True, default='') #is_eager is not respected by click
-@click.option('--dns_resolver_2', prompt='Enter DNS resolver', is_eager=True, default='') #dns_resolvers_x must be passed before manage_resolver=x
+@click.option('--dns_resolver_1', prompt='Enter DNS resolver', is_eager=True, default='')
+@click.option('--dns_resolver_2', prompt='Enter DNS resolver', is_eager=True, default='')
 @click.option('--manage_resolver', required=True, type=bool, prompt='Have Platform9 Express manage DNS resolvers', default=False, callback=manage_dns_resolvers)
 @click.pass_context
 def create(ctx, **kwargs):
