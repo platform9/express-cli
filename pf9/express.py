@@ -148,9 +148,31 @@ def upgrade():
 def config():
     """Configure Platform9 Express."""
 
+def manage_dns_resolvers(ctx, param, man_resolvers):
+    if man_resolvers:
+        if not ctx.params['dns_resolver_1']:
+            ctx.params['dns_resolver_1'] = click.prompt('Enter DNS Resolver 1')
+        if not ctx.params['dns_resolver_2']:
+            ctx.params['dns_resolver_2'] = click.prompt('Enter DNS Resolver 2')
+    else:
+        ctx.params['dns_resolver_1'] = "8.8.8.8"
+        ctx.params['dns_resolver_2'] = "8.8.4.4"
+    return ctx
 
 @config.command('create')
-def create():
+@click.option('--config_name', '--name', required=True, prompt='Config name')
+@click.option('--du_url', '--du', required=True, prompt='Platform9 management URL')
+@click.option('--os_username', required=True, prompt='Platform9 user')
+@click.option('--os_password', required=True, prompt='Platform9 password', hide_input=True)
+@click.option('--os_region', required=True, prompt='Platform9 region')
+@click.option('--os_tenant', required=True, prompt='Platform9 tenant', default='service')
+@click.option('--proxy_url', required=True, prompt='Proxy url for internet access', default='-')
+@click.option('--manage_hostname', required=True, prompt='Have Platform9 Express manage hostnames', default=False)
+@click.option('--dns_resolver_1', prompt='Enter DNS resolver', is_eager=True, default='') #is_eager is not respected by click
+@click.option('--dns_resolver_2', prompt='Enter DNS resolver', is_eager=True, default='') #dns_resolvers_x must be passed before manage_resolver=x
+@click.option('--manage_resolver', required=True, type=bool, prompt='Have Platform9 Express manage DNS resolvers', default=False, callback=manage_dns_resolvers)
+@click.pass_context
+def create(ctx, **kwargs):
     """Create Platform9 Express config."""
     # creates and activates pf9-express config file 
 
@@ -159,7 +181,6 @@ def create():
     path = home + '/pf9/'
     dir_path = path + 'pf9-express/config/'
     
-
     if os.path.exists(dir_path + 'express.conf'):
         with open(dir_path + 'express.conf', 'r') as current:
             lines = current.readlines()
@@ -172,34 +193,16 @@ def create():
         filename = name + '.conf'
         shutil.copyfile(dir_path + 'express.conf', dir_path + filename)
 
-    prompts = {}
-    prompts['config_name'] = click.prompt('Config name', type=str)
-    prompts['du_url'] = click.prompt('Platform9 management URL', type=str)
-    prompts['os_username'] = click.prompt('Platform9 user', type=str)
-    prompts['os_password'] = click.prompt('Platform9 password', hide_input=True, type=str)
-    prompts['os_region'] = click.prompt('Platform9 region', type=str)
-    prompts['os_tenant'] = click.prompt('Platform9 tenant', default='service', type=str)
-    prompts['proxy_url'] = click.prompt('Proxy url for internet access', default='-', type=str)
-    prompts['manage_hostname'] = click.prompt('Have Platform9 Express manage hostnames', default=False, type=str)
-    prompts['manage_resolver'] = click.prompt('Have Platform9 Express manage DNS resolvers', default=False, type=bool)
-
-    if prompts['manage_resolver']:
-        prompts['dns_resolver1'] = click.prompt('Platform9 management URL:', type=str)
-        prompts['dns_resolver2'] = click.prompt('Platform9 management URL:', type=str)
-    else:
-        prompts['dns_resolver1'] = '8.8.8.8'
-        prompts['dns_resolver2'] = '8.8.4.4'
-
     if not os.path.exists(dir_path):
         try:
-            os.mkdir(dir_path, access_rights)
+            os.makedirs(dir_path, access_rights)
         except OSError:
             click.echo("Creation of the directory %s failed" % dir_path)
         else:
             click.echo("Successfully created the directory %s " % dir_path)
     
     with open(dir_path + 'express.conf', 'w') as file:
-        for k,v in prompts.items():
+        for k,v in ctx.params.items():
             file.write(k + '|' + str(v) + '\n')
     file.close()
     click.echo('Successfully wrote Platform9 Express configuration')
