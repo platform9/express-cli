@@ -14,39 +14,47 @@ from os.path import expanduser
 from prettytable import PrettyTable
 
 
+#@click.Context(auto_envvar_prefix='PF9_EXPRESS')
+
 @click.group()
 @click.version_option(message='%(version)s')
-def cli():
+@click.pass_context
+def cli(ctx):
     """Express.
     A CLI for Platform9 Express.
     """
-
+    # Set Global Vars into context objs
+    if ctx.obj is None:
+        ctx.obj= dict()
+    ctx.obj['home_dir'] = expanduser("~")
+    ctx.obj['pf9_dir'] = os.path.join(ctx.obj['home_dir'], 'pf9/')
+    ctx.obj['pf9_exp_dir'] = os.path.join(ctx.obj['pf9_dir'], 'pf9-express/')
+    ctx.obj['pf9_exp_conf_dir'] = os.path.join(ctx.obj['pf9_exp_dir'], 'config/')
 
 @cli.command('init')
-def init():
+@click.pass_obj
+def init(obj):
     """Initialize Platform9 Express."""
     #initialize with current version of pf9-express 
 
-
-    home = expanduser("~")
     access_rights = 0o755
-    path = home + '/pf9/'
-    dir_path = path + 'pf9-express/'
-    target_path = path + 'express.tar.gz'
+    pf9_dir = obj['pf9_dir']
+    pf9_exp_dir = obj['pf9_exp_dir']
+    target_path = pf9_dir + 'express.tar.gz'
 
-    if not os.path.exists(dir_path):
+    if not os.path.exists(pf9_exp_dir):
         r = requests.get('https://api.github.com/repos/platform9/express/releases/latest')
         response = r.json()
         url = response['tarball_url']
         version = response['name']
 
-        if not os.path.exists(path):
+        if not os.path.exists(pf9_dir):
             try:
-                os.mkdir(path, access_rights)
+                os.mkdir(pf9_dir, access_rights)
             except OSError:
-                print ("Creation of the directory %s failed" % path)
+                print ("Creation of the directory %s failed" % pf9_dir)
             else:
-                print ("Successfully created the directory %s " % path)
+                print ("Successfully created the directory %s " % pf9_dir)
 
         response = requests.get(url, stream=True)
         if response.status_code == 200:
@@ -57,13 +65,13 @@ def init():
         tar.extractall(dir_path)
         tar.close()
 
-        with open(dir_path + 'version', 'w') as file:
+        with open(pf9_exp_dir + 'version', 'w') as file:
             file.write(version + '\n')
             file.close()
 
-        for dir in next(os.walk(dir_path))[1]:
+        for dir in next(os.walk(pf9_exp_dir))[1]:
             if 'platform9-express-' in dir:
-                os.rename( dir_path + dir, dir_path + 'express' )
+                os.rename( pf9_exp_dir + dir, pf9_exp_dir + 'express' )
         
         click.echo('Platform9 Express initialization complete')
     else:
@@ -71,15 +79,14 @@ def init():
 
 
 @cli.command('version')
-def version():
+@click.pass_obj
+def version(obj):
     """Show Platform9 Express version."""
     # print current version of pf9-express 
 
-    home = expanduser("~")
-    path = home + '/pf9/'
-    dir_path = path + 'pf9-express/'
+    pf9_exp_dir = obj['pf9_exp_dir']
 
-    with open(dir_path + 'version', 'r') as v:
+    with open(pf9_exp_dir + 'version', 'r') as v:
         line = v.readline()
         line = line.strip()
         v.close()
@@ -88,7 +95,8 @@ def version():
 
 
 @cli.command('upgrade')
-def upgrade():
+@click.pass_obj
+def upgrade(obj):
     """Upgrade Platform9 Express."""
     # upgrade to latest version of pf9-express 
  
@@ -96,26 +104,25 @@ def upgrade():
     response = r.json()
     url = response['tarball_url']
     version = response['name']
-    home = expanduser("~")
     access_rights = 0o755
-    path = home + '/pf9/'
-    dir_path = path + 'pf9-express/'
-    target_path = path + 'express.tar.gz'
+    pf9_dir = obj['pf9_dir']
+    pf9_exp_dir = obj['pf9_exp_dir']
+    target_path = pf9_dir + 'express.tar.gz'
 
-    with open(dir_path + 'version', 'r') as v:
+    with open(pf9_exp_dir + 'version', 'r') as v:
         line = v.readline()
         line = line.strip()
         v.close()
 
     if line != version:
         click.echo("we are here, we are really here")
-        if not os.path.exists(path):
+        if not os.path.exists(pf9_exp_dir):
             try:
-                os.mkdir(path, access_rights)
+                os.mkdir(pf9_exp_dir, access_rights)
             except OSError:
-                print ("Creation of the directory %s failed" % path)
+                print ("Creation of the directory %s failed" % pf9_exp_dir)
             else:
-                print ("Successfully created the directory %s " % path)
+                print ("Successfully created the directory %s " % pf9_exp_dir)
 
         response = requests.get(url, stream=True)
         if response.status_code == 200:
@@ -123,18 +130,18 @@ def upgrade():
                 f.write(response.raw.read())
         
         tar = tarfile.open(target_path, "r:gz")
-        tar.extractall(dir_path)
+        tar.extractall(pf9_exp_dir)
         tar.close()
 
-        os.rename( dir_path + 'express', dir_path +'express-bak')
+        os.rename( pf9_exp_dir + 'express', pf9_exp_dir +'express-bak')
 
-        for dir in next(os.walk(dir_path))[1]:
+        for dir in next(os.walk(pf9_exp_dir))[1]:
             if 'platform9-express-' in dir:
-                os.rename( dir_path + dir, dir_path + 'express' )
+                os.rename( pf9_exp_dir + dir, pf9_exp_dir + 'express' )
         
-        shutil.rmtree(dir_path + 'express-bak')
+        shutil.rmtree(pf9_exp_dir + 'express-bak')
 
-        with open(dir_path + 'version', 'w') as file:
+        with open(pf9_exp_dir + 'version', 'w') as file:
             file.write(version + '\n')
             file.close()
         
@@ -147,19 +154,36 @@ def upgrade():
 @cli.group()
 def config():
     """Configure Platform9 Express."""
-
+def manage_dns_resolvers(ctx, param, man_resolvers):
+    if man_resolvers:
+        if not ctx.params['dns_resolver_1']:
+            ctx.params['dns_resolver_1'] = click.prompt('Enter DNS Resolver 1')
+        if not ctx.params['dns_resolver_2']:
+            ctx.params['dns_resolver_2'] = click.prompt('Enter DNS Resolver 2')
+    else:
+        ctx.params['dns_resolver_1'] = "8.8.8.8"
+        ctx.params['dns_resolver_2'] = "8.8.4.4"
+    return man_resolvers 
 
 @config.command('create')
-def create():
+@click.option('--config_name', '--name', required=True, prompt='Config name')
+@click.option('--du_url', '--du', required=True, prompt='Platform9 management URL')
+@click.option('--os_username', required=True, prompt='Platform9 user')
+@click.option('--os_password', required=True, prompt='Platform9 password', hide_input=True)
+@click.option('--os_region', required=True, prompt='Platform9 region')
+@click.option('--os_tenant', required=True, prompt='Platform9 tenant', default='service')
+@click.option('--proxy_url', required=True, prompt='Proxy url for internet access', default='-')
+@click.option('--manage_hostname', required=True, prompt='Have Platform9 Express manage hostnames', default=False)
+@click.option('--dns_resolver_1', prompt='Enter DNS resolver', is_eager=True, default='')
+@click.option('--dns_resolver_2', prompt='Enter DNS resolver', is_eager=True, default='')
+@click.option('--manage_resolver', required=True, type=bool, prompt='Have Platform9 Express manage DNS resolvers', default=False, callback=manage_dns_resolvers)
+@click.pass_context
+def create(ctx, **kwargs):
     """Create Platform9 Express config."""
     # creates and activates pf9-express config file 
 
-    home = expanduser("~")
-    access_rights = 0o755
-    path = home + '/pf9/'
-    dir_path = path + 'pf9-express/config/'
+    dir_path = ctx.obj['pf9_exp_conf_dir']
     
-
     if os.path.exists(dir_path + 'express.conf'):
         with open(dir_path + 'express.conf', 'r') as current:
             lines = current.readlines()
@@ -172,46 +196,27 @@ def create():
         filename = name + '.conf'
         shutil.copyfile(dir_path + 'express.conf', dir_path + filename)
 
-    prompts = {}
-    prompts['config_name'] = click.prompt('Config name', type=str)
-    prompts['du_url'] = click.prompt('Platform9 management URL', type=str)
-    prompts['os_username'] = click.prompt('Platform9 user', type=str)
-    prompts['os_password'] = click.prompt('Platform9 password', hide_input=True, type=str)
-    prompts['os_region'] = click.prompt('Platform9 region', type=str)
-    prompts['os_tenant'] = click.prompt('Platform9 tenant', default='service', type=str)
-    prompts['proxy_url'] = click.prompt('Proxy url for internet access', default='-', type=str)
-    prompts['manage_hostname'] = click.prompt('Have Platform9 Express manage hostnames', default=False, type=str)
-    prompts['manage_resolver'] = click.prompt('Have Platform9 Express manage DNS resolvers', default=False, type=bool)
-
-    if prompts['manage_resolver']:
-        prompts['dns_resolver1'] = click.prompt('Platform9 management URL:', type=str)
-        prompts['dns_resolver2'] = click.prompt('Platform9 management URL:', type=str)
-    else:
-        prompts['dns_resolver1'] = '8.8.8.8'
-        prompts['dns_resolver2'] = '8.8.4.4'
-
     if not os.path.exists(dir_path):
         try:
-            os.mkdir(dir_path, access_rights)
+            os.makedirs(dir_path, access_rights)
         except OSError:
             click.echo("Creation of the directory %s failed" % dir_path)
         else:
             click.echo("Successfully created the directory %s " % dir_path)
     
     with open(dir_path + 'express.conf', 'w') as file:
-        for k,v in prompts.items():
+        for k,v in ctx.params.items():
             file.write(k + '|' + str(v) + '\n')
     file.close()
     click.echo('Successfully wrote Platform9 Express configuration')
 
 
 @config.command('list')
-def list():
+@click.pass_obj
+def list(obj):
     """List Platform9 Express configs."""
     # lists pf9-express config files 
-    home = expanduser("~")
-    path = home + '/pf9/'
-    dir_path = path + 'pf9-express/config/'
+    dir_path = obj['pf9_exp_conf_dir']
 
     if os.path.exists(dir_path):
         count = 1
@@ -229,7 +234,7 @@ def list():
                     if 'config_name|' in line:
                         name = line.replace('config_name|','')
                     if 'du_url' in line:
-                        du_url = line.replace('du_url|https://','')
+                        du_url = line.replace('du_url|','')
                     if 'os_region' in line:
                         os_region = line.replace('os_region|','')
                 data.close()
@@ -247,13 +252,12 @@ def list():
 
 @config.command('activate')
 @click.argument('config')
-def activate(config):
+@click.pass_obj
+def activate(obj, config):
     """Activate Platform9 Express config."""
     # activates pf9-express config file 
     click.echo("Activating config %s" % config)
-    home = expanduser("~")
-    path = home + '/pf9/'
-    dir_path = path + 'pf9-express/config/'
+    dir_path = obj['pf9_exp_conf_dir']
 
     if os.path.exists(dir_path + 'express.conf'):
         with open(dir_path + 'express.conf', 'r') as current:
