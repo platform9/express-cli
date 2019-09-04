@@ -12,9 +12,8 @@ import util
 
 from os.path import expanduser
 from prettytable import PrettyTable
+from util import Pf9ExpVersion 
 
-
-#@click.Context(auto_envvar_prefix='PF9_EXPRESS')
 
 @click.group()
 @click.version_option(message='%(version)s')
@@ -30,6 +29,7 @@ def cli(ctx):
     ctx.obj['pf9_dir'] = os.path.join(ctx.obj['home_dir'], 'pf9/')
     ctx.obj['pf9_exp_dir'] = os.path.join(ctx.obj['pf9_dir'], 'pf9-express/')
     ctx.obj['pf9_exp_conf_dir'] = os.path.join(ctx.obj['pf9_exp_dir'], 'config/')
+
 
 @cli.command('init')
 @click.pass_obj
@@ -83,15 +83,14 @@ def init(obj):
 def version(obj):
     """Show Platform9 Express version."""
     # print current version of pf9-express 
-
-    pf9_exp_dir = obj['pf9_exp_dir']
-
-    with open(pf9_exp_dir + 'version', 'r') as v:
-        line = v.readline()
-        line = line.strip()
-        v.close()
-    
-    click.echo('Platform9 Express: %s' % line)
+    ver = Pf9ExpVersion()
+    ver_file_path = os.path.join(obj['pf9_exp_dir'], 'version')
+    try: 
+        version = ver.get_local(ver_file_path)
+    except:
+        click.echo('Installed PF9-Express version information not available\nTry:\n    $ express init --help')
+    else:
+        click.echo('Installed Platform9 Express Version: %s' % version)
 
 
 @cli.command('upgrade')
@@ -100,6 +99,9 @@ def upgrade(obj):
     """Upgrade Platform9 Express."""
     # upgrade to latest version of pf9-express 
  
+    ver = Pf9ExpVersion()
+    click.echo(ver.get_latest_json())
+
     r = requests.get('https://api.github.com/repos/platform9/express/releases/latest')
     response = r.json()
     url = response['tarball_url']
@@ -182,10 +184,10 @@ def create(ctx, **kwargs):
     """Create Platform9 Express config."""
     # creates and activates pf9-express config file 
 
-    dir_path = ctx.obj['pf9_exp_conf_dir']
+    pf9_exp_conf_dir = ctx.obj['pf9_exp_conf_dir']
     
-    if os.path.exists(dir_path + 'express.conf'):
-        with open(dir_path + 'express.conf', 'r') as current:
+    if os.path.exists(pf9_exp_conf_dir + 'express.conf'):
+        with open(pf9_exp_conf_dir + 'express.conf', 'r') as current:
             lines = current.readlines()
             current.close()
         for line in lines:
@@ -194,20 +196,19 @@ def create(ctx, **kwargs):
                 name = line.replace('config_name|','')
         
         filename = name + '.conf'
-        shutil.copyfile(dir_path + 'express.conf', dir_path + filename)
+        shutil.copyfile(pf9_exp_conf_dir + 'express.conf', pf9_exp_conf_dir + filename)
 
-    if not os.path.exists(dir_path):
+    if not os.path.exists(pf9_exp_conf_dir):
         try:
-            os.makedirs(dir_path, access_rights)
-        except OSError:
-            click.echo("Creation of the directory %s failed" % dir_path)
+            os.makedirs(pf9_exp_conf_dir, access_rights)
+        except:
+            click.echo("Creation of the directory %s failed." % pf9_exp_conf_dir)
         else:
-            click.echo("Successfully created the directory %s " % dir_path)
+            click.echo("Successfully created the directory %s " % pf9_exp_conf_dir)
     
-    with open(dir_path + 'express.conf', 'w') as file:
+    with open(pf9_exp_conf_dir + 'express.conf', 'w') as file:
         for k,v in ctx.params.items():
             file.write(k + '|' + str(v) + '\n')
-    file.close()
     click.echo('Successfully wrote Platform9 Express configuration')
 
 
@@ -216,19 +217,19 @@ def create(ctx, **kwargs):
 def list(obj):
     """List Platform9 Express configs."""
     # lists pf9-express config files 
-    dir_path = obj['pf9_exp_conf_dir']
+    pf9_exp_conf_dir = obj['pf9_exp_conf_dir']
 
-    if os.path.exists(dir_path):
+    if os.path.exists(pf9_exp_conf_dir):
         count = 1
         result = PrettyTable()
         result.field_names = ["#","Active", "Conf", "Management Plane", "Region"]
-        files = [f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))]
+        files = [f for f in os.listdir(pf9_exp_conf_dir) if os.path.isfile(os.path.join(pf9_exp_conf_dir, f))]
 
         for f in files:
             active = False
             if f == 'express.conf':
                 active = True
-            with open(dir_path + f, 'r') as data:
+            with open(pf9_exp_conf_dir + f, 'r') as data:
                 for line in data:
                     line = line.strip()
                     if 'config_name|' in line:
@@ -379,9 +380,9 @@ def add_node(cluster):
 #     click.echo('WIP')
 
 
-@cluster.command('create')
+@cluster.command('build')
 @click.argument('cluster')
-def create(cluster):
+def build(cluster):
     """Create a defined Kubernetes cluster."""
     # create a defined cluster in qbert and add defined nodes to cluster
     click.echo('WIP')
