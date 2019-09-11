@@ -13,8 +13,9 @@ from unittest import TestCase
 from click.testing import CliRunner
 
 from pf9 import __version__ as VERSION
-from pf9.express import list as cli_config_list
-from pf9.express import create as cli_config_create
+from pf9.config.commands import list as cli_config_list
+from pf9.config.commands import create as cli_config_create
+from pf9.express import version as cli_version
 try:
     # python 3.4+ should use builtin unittest.mock not mock package
     from unittest.mock import patch
@@ -35,27 +36,31 @@ class TestPf9ExpVersion(TestCase):
     @classmethod
     def setUp(self):
         self.log = logging.getLogger('Running setUp for: '+ inspect.currentframe().f_code.co_name)
-        self.conf_dir = os.path.join('pf9/pf9-express/config/')
-        self.obj_test = dict({'pf9_exp_conf_dir': self.conf_dir})
+        self.version_id = 'v1.0.1'
+        self.runner = CliRunner()
 
-    def test_version(self):
-        self.log.debug('*** TEST ISOLATED FILESYSTEM ***')
-        runner = CliRunner()
-        with runner.isolated_filesystem():
-            os.makedirs('pf9/pf9-express/', 0o755)
-            os.makedirs(self.conf_dir, 0o755)
-            self.log.debug('Directory Created: ' + self.conf_dir)
-            if os.path.exists(self.conf_dir):
-                self.log.debug('Directory exists: ' + self.conf_dir)
-            #assert (result.exit_code == 0)
+    def test_cli_version(self):
+        with self.runner.isolated_filesystem():
+            tmp_dir = os.getcwd()
+            pf9_exp_dir = os.path.join(tmp_dir, 'pf9/pf9-express/')
+            os.makedirs(pf9_exp_dir, 0o755)
+            obj_test = dict({'pf9_exp_dir': pf9_exp_dir})
+            
+            # Test when version file doesn't exist
+            result_1 = self.runner.invoke(cli_version, obj=obj_test) 
+            assert ('version information not available' in result_1.output)
 
-#            assert ('Successfully wrote Platform9 Express configuration' in result.output)
 
-#    Test Correct Response
-#    Test No version file
-#    Test No data in version file
-#    Writing Version file
-#    Check for upgrade
+            with open(os.path.join(pf9_exp_dir, 'version'), 'w+') as write_ver:
+                # Test when version file exist no data
+                result_2 = self.runner.invoke(cli_version, obj=obj_test) 
+                assert ('version information not available' in result_2.output)
+                
+                # Test when version file exist
+                write_ver.write(self.version_id)
+            result_3 = self.runner.invoke(cli_version, obj=obj_test) 
+            assert (self.version_id in result_3.output)
+
 
 class TestConfigCreate(TestCase):
     # ToDo: Need better method for test dir. Can not write to unittest temp dir from click methods
