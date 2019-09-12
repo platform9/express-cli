@@ -2,7 +2,8 @@ import click
 import os
 import shutil
 from prettytable import PrettyTable
-
+from ..modules.ostoken import GetToken
+from ..modules.util import Utils 
 
 @click.group()
 def config():
@@ -131,4 +132,22 @@ def activate(obj, config):
 
     click.echo('Config %s is now active' % config)
 
+
+@config.command('validate')
+@click.pass_obj
+def config_validate(obj):
+    """Validate Platform9 Express config."""
+    # Validates pf9-express config file and obtains Auth Token
+    config_file = os.path.join(obj['pf9_exp_conf_dir'], 'express.conf')
+    
+    if os.path.exists(config_file):
+        config = Utils().config_to_json(config_file)
+    else:
+        click.echo('No active config. Please define or activate a config.')
+
+    if config is not None:
+        token = GetToken().get_token_v3(config["du_url"], config["os_username"], config["os_password"], config["os_tenant"] )
+        if token is not None:
+            click.echo('Config Validated!')
+            click.echo('Token: %s' % token)
 

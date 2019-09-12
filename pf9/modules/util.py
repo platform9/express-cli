@@ -7,6 +7,34 @@ import tarfile
 import shutil
 import urlparse
 
+class Utils:
+    def config_to_json(self, config_file):
+        config = {}
+        try:
+            with open(config_file, 'r') as data:
+                lines = data.readlines()
+            for line in lines:
+                if 'config_name|' in line:
+                    line = line.strip()
+                    config.update( {'name' : line.replace('config_name|','')} )
+                if 'du_url' in line:
+                    line = line.strip()
+                    config.update( {'du_url' : line.replace('du_url|','')} )
+                if 'os_tenant' in line:
+                    line = line.strip()
+                    config.update( {'os_tenant' : line.replace('os_tenant|','')} )
+                if 'os_username' in line:
+                    line = line.strip()
+                    config.update( {'os_username' : line.replace('os_username|','')} )
+                if 'os_region' in line:
+                    line = line.strip()
+                    config.update( {'os_region' : line.replace('os_region|','')} )
+                if 'os_password' in line:
+                    line = line.strip()
+                    config.update( {'os_password' : line.replace('os_password|','')} )
+            return config
+        except:
+            return error 
 
 class Pf9ExpVersion:
     ''' Methods for managing PF9 Versions'''

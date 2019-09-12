@@ -1,6 +1,6 @@
 import click
 from os import path
-from ..util import Pf9ExpVersion
+from ..modules.util import Pf9ExpVersion
 
 @click.group(invoke_without_command=True)
 @click.pass_obj
