@@ -90,7 +90,7 @@ def list(obj):
                 result.add_row([count,' ', config["name"], config["du_url"], config["os_region"]])
             count = count + 1
 
-        print result
+        click.echo(result)
 
     else:
         click.echo('No Platform9 Express configs exist')
