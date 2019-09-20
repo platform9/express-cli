@@ -15,6 +15,7 @@ from click.testing import CliRunner
 from pf9 import __version__ as VERSION
 from pf9.config.commands import list as cli_config_list
 from pf9.config.commands import create as cli_config_create
+from pf9.express import cli
 from pf9.express import version as cli_version
 try:
     # python 3.4+ should use builtin unittest.mock not mock package
@@ -25,12 +26,12 @@ except ImportError:
 class TestHelp(TestCase):
     def test_returns_usage_information(self):
         output = popen(['express', '--help'], stdout=PIPE).communicate()[0]
-        self.assertTrue('Usage:' in output)
+        self.assertTrue('Usage:' in str(output))
 
 class TestExpCliVersion(TestCase):
     def test_returns_version_information(self):
         output = popen(['express', '--version'], stdout=PIPE).communicate()[0]
-        self.assertEqual(output.strip(), VERSION)
+        self.assertEqual(output.decode("utf-8").strip(), VERSION)
 # WIP
 class TestPf9ExpVersion(TestCase):
     @classmethod
