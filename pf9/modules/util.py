@@ -1,11 +1,5 @@
-import subprocess
-import time
-import os
 import json
 import requests
-import tarfile
-import shutil
-import urlparse
 
 class Utils:
     def config_to_dict(self, config_file):
