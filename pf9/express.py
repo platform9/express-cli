@@ -1,12 +1,9 @@
 import click
-import subprocess
-import time
 import os
 import json
 import requests
 import tarfile
 import shutil
-import urlparse
 
 from os.path import expanduser
 from .modules.util import Pf9ExpVersion
