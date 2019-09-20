@@ -47,9 +47,9 @@ def init(obj):
     target_path = pf9_dir + 'express.tar.gz'
 
     if not os.path.exists(pf9_exp_dir):
-        r = requests.get('https://api.github.com/repos/platform9/express/releases/latest')
-        response = r.json()
-        url = response['tarball_url']
+        get_exp_ver = Pf9ExpVersion() 
+        exp_ver = get_exp_ver.get_release_json 
+        url = exp_ver['url_tar']
         version = response['name']
 
         if not os.path.exists(pf9_dir):

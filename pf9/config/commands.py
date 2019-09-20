@@ -37,7 +37,8 @@ def create(ctx, **kwargs):
     # creates and activates pf9-express config file
 
     pf9_exp_conf_dir = ctx.obj['pf9_exp_conf_dir']
-
+    
+    # Backup existing config if one exist
     if os.path.exists(pf9_exp_conf_dir + 'express.conf'):
         with open(pf9_exp_conf_dir + 'express.conf', 'r') as current:
             lines = current.readlines()
@@ -81,20 +82,12 @@ def list(obj):
             active = False
             if f == 'express.conf':
                 active = True
-            with open(pf9_exp_conf_dir + f, 'r') as data:
-                for line in data:
-                    line = line.strip()
-                    if 'config_name|' in line:
-                        name = line.replace('config_name|','')
-                    if 'du_url' in line:
-                        du_url = line.replace('du_url|','')
-                    if 'os_region' in line:
-                        os_region = line.replace('os_region|','')
-                data.close()
-                if active:
-                    result.add_row([count,'*',name, du_url, os_region])
-                else:
-                    result.add_row([count,' ',name, du_url, os_region])
+            with open(pf9_exp_conf_dir + f, 'r') as config_file:
+                config = Utils().config_to_dict(config_file)
+            if active:
+                result.add_row([count,'*', config["name"], config["du_url"], config["os_region"]])
+            else:
+                result.add_row([count,' ', config["name"], config["du_url"], config["os_region"]])
             count = count + 1
 
         print result
@@ -136,18 +129,26 @@ def activate(obj, config):
 @config.command('validate')
 @click.pass_obj
 def config_validate(obj):
-    """Validate Platform9 Express config."""
+    """Validate Active Platform9 Express config."""
     # Validates pf9-express config file and obtains Auth Token
     config_file = os.path.join(obj['pf9_exp_conf_dir'], 'express.conf')
-    
     if os.path.exists(config_file):
-        config = Utils().config_to_json(config_file)
+        try:
+            with open(config_file, 'r') as data:
+                config_file_lines = data.readlines()
+        except:
+            click.echo('Failed reading %s: '% config_file)
+        config = Utils().config_to_dict(config_file_lines)
+        if config is not None:
+            token = GetToken().get_token_v3(
+                        config["du_url"], 
+                        config["os_username"], 
+                        config["os_password"], 
+                        config["os_tenant"] )
+            if token is not None:
+                click.echo('Config Validated!')
+                click.echo('Token: %s' % token)
     else:
         click.echo('No active config. Please define or activate a config.')
 
-    if config is not None:
-        token = GetToken().get_token_v3(config["du_url"], config["os_username"], config["os_password"], config["os_tenant"] )
-        if token is not None:
-            click.echo('Config Validated!')
-            click.echo('Token: %s' % token)
 

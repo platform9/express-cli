@@ -17,12 +17,16 @@ elif sys.version_info.major == 3:
 
 class GetToken:
     def do_request(self, action, host, relative_url, headers, body):
-        conn = httplib.HTTPSConnection(host)
-        body_json = json.JSONEncoder().encode(body)
-        conn.request(action, relative_url, body_json, headers)
-        response = conn.getresponse()
-        return conn, response
-    
+        try:
+            conn = httplib.HTTPSConnection(host)
+            body_json = json.JSONEncoder().encode(body)
+            conn.request(action, relative_url, body_json, headers)
+            response = conn.getresponse()
+            return conn, response
+        except Exception as error:
+            raise Exception(error)
+            
+
     def get_token_v3(self, host, username, password, tenant):
         headers = {"Content-Type": "application/json"}
         body = {
