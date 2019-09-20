@@ -1,6 +1,9 @@
 # express-cli
 platform9 express cli
 
+### Status
+[![Build Status](https://travis-ci.com/platform9/express-cli.svg?branch=master)](https://travis-ci.com/platform9/express-cli)
+
 Purpose
 -------
 
