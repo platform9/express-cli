@@ -5,29 +5,14 @@
 # maintainer: tom.christopoulos@platform9.com
 
 import json
+import requests
 import sys
-
-if sys.version_info.major == 2:
-    import httplib
-    import urlparse
-elif sys.version_info.major == 3:
-    from http import client as httplib
-    from urllib import parse as urlparse
 
 
 class GetToken:
-    def do_request(self, action, host, relative_url, headers, body):
-        try:
-            conn = httplib.HTTPSConnection(host)
-            body_json = json.JSONEncoder().encode(body)
-            conn.request(action, relative_url, body_json, headers)
-            response = conn.getresponse()
-            return conn, response
-        except Exception as error:
-            raise Exception(error)
-            
 
     def get_token_v3(self, host, username, password, tenant):
+        keystone_endpoint = '%s/keystone/v3/auth/tokens?nocatalog' % host
         headers = {"Content-Type": "application/json"}
         body = {
             "auth": {
@@ -49,14 +34,12 @@ class GetToken:
                 }
             }
         }
-        conn, response = self.do_request("POST", host,
-                                    "/keystone/v3/auth/tokens?nocatalog",
-                                    headers, body)
+        r = requests.post(keystone_endpoint, headers=headers,
+                          json=body)
+
+        if r.status_code not in (200, 201):
+            print("{0}: {1}".format(r.status_code, r.text))
+            sys.exit(1)
      
-        if response.status not in (200, 201):
-            print("{0}: {1}".format(response.status, response.reason))
-            exit(1)
-     
-        token = response.getheader('X-Subject-Token')
-        conn.close()
+        token = r.headers['X-Subject-Token']
         return token

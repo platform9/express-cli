@@ -45,9 +45,9 @@ def init(obj):
 
     if not os.path.exists(pf9_exp_dir):
         get_exp_ver = Pf9ExpVersion() 
-        exp_ver = get_exp_ver.get_release_json 
+        exp_ver = get_exp_ver.get_release_json()
         url = exp_ver['url_tar']
-        version = response['name']
+        version = exp_ver['version']
 
         if not os.path.exists(pf9_dir):
             try:
@@ -63,7 +63,7 @@ def init(obj):
                 f.write(response.raw.read())
         
         tar = tarfile.open(target_path, "r:gz")
-        tar.extractall(dir_path)
+        tar.extractall(pf9_exp_dir)
         tar.close()
 
         with open(pf9_exp_dir + 'version', 'w') as file:
@@ -91,7 +91,7 @@ def upgrade(obj):
     r = requests.get('https://api.github.com/repos/platform9/express/releases/latest')
     response = r.json()
     url = response['tarball_url']
-    version = response['name']
+    version = response['version']
     access_rights = 0o755
     pf9_dir = obj['pf9_dir']
     pf9_exp_dir = obj['pf9_exp_dir']
