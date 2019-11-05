@@ -58,7 +58,7 @@ class Pf9ExpVersion:
                 "url_tar": response["tarball_url"],
                 "url_zip": response["zipball_url"]
                 }
-        return json.dumps(json_return)
+        return json_return
     
     def get_release(self, release ='latest'):
         r = requests.get('https://api.github.com/repos/platform9/express/releases/' + release)
