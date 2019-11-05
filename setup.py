@@ -59,7 +59,7 @@ setup(
     packages = find_packages(exclude=['docs', 'tests*']),
     install_requires = ['Click', 'prettytable', 'requests'],
     extras_require = {
-        'test': ['coverage', 'pytest', 'pytest-cov'],
+        'test': ['coverage', 'pytest', 'pytest-cov', 'mock'],
     },
     entry_points = {
         'console_scripts': [

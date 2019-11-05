@@ -53,10 +53,10 @@ def create(ctx, **kwargs):
 
     if not os.path.exists(pf9_exp_conf_dir):
         try:
-            access_rights = 0700
+            access_rights = 0o700
             os.makedirs(pf9_exp_conf_dir, access_rights)
-        except Exception, e:
-            click.echo("Creation of the directory %s failed: %s" % pf9_exp_conf_dir, e)
+        except Exception:
+            click.echo("Creation of the directory %s failed" % pf9_exp_conf_dir)
         else:
             click.echo("Successfully created the directory %s " % pf9_exp_conf_dir)
 
