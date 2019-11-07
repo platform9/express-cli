@@ -1,5 +1,5 @@
 # express-cli
-platform9 express cli
+PF9-Express is a CS-developed tool for bringing bare-metal hosts under management by a Platform9 control plane.  It can bring a host to the point where it shows up in the Clarify UI as a host waiting to be authorized, or it can (optionally) perform Platform9 role deployments for both OpenStack and Kubernetes. 
 
 ### Status
 [![Build Status](https://travis-ci.com/platform9/express-cli.svg?branch=master)](https://travis-ci.com/platform9/express-cli)
@@ -13,6 +13,8 @@ A CLI for Platform9 Express
 
 Usage
 -----
+Use `express --help` to get list of commands and subcommands.
+
 
 If you've cloned this project, and want to install the library (*and all
 development dependencies*), the command you'll want to run is::
