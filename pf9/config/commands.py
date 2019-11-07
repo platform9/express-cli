@@ -10,13 +10,13 @@ def config():
     """Configure Platform9 Express."""
 def manage_dns_resolvers(ctx, param, man_resolvers):
     if man_resolvers:
-        if not ctx.params['dns_resolver_1']:
-            ctx.params['dns_resolver_1'] = click.prompt('Enter DNS Resolver 1')
-        if not ctx.params['dns_resolver_2']:
-            ctx.params['dns_resolver_2'] = click.prompt('Enter DNS Resolver 2')
+        if not ctx.params['dns_resolver1']:
+            ctx.params['dns_resolver1'] = click.prompt('Enter DNS Resolver 1')
+        if not ctx.params['dns_resolver2']:
+            ctx.params['dns_resolver2'] = click.prompt('Enter DNS Resolver 2')
     else:
-        ctx.params['dns_resolver_1'] = "8.8.8.8"
-        ctx.params['dns_resolver_2'] = "8.8.4.4"
+        ctx.params['dns_resolver1'] = "8.8.8.8"
+        ctx.params['dns_resolver2'] = "8.8.4.4"
     return man_resolvers
 
 @config.command('create')
@@ -28,8 +28,8 @@ def manage_dns_resolvers(ctx, param, man_resolvers):
 @click.option('--os_tenant', required=True, prompt='Platform9 tenant', default='service')
 @click.option('--proxy_url', required=True, prompt='Proxy url for internet access', default='-')
 @click.option('--manage_hostname', required=True, prompt='Have Platform9 Express manage hostnames', default=False)
-@click.option('--dns_resolver_1', prompt='Enter DNS resolver', is_eager=True, default='')
-@click.option('--dns_resolver_2', prompt='Enter DNS resolver', is_eager=True, default='')
+@click.option('--dns_resolver1', prompt='Enter DNS resolver 1', is_eager=True, default='')
+@click.option('--dns_resolver2', prompt='Enter DNS resolver 2', is_eager=True, default='')
 @click.option('--manage_resolver', required=True, type=bool, prompt='Have Platform9 Express manage DNS resolvers', default=False, callback=manage_dns_resolvers)
 @click.pass_context
 def create(ctx, **kwargs):
