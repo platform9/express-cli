@@ -79,8 +79,8 @@ class TestConfigCreate(TestCase):
                 os_region|region1
                 os_username|test.user@platform9.com
                 proxy_url|-
-                dns_resolver_1|1.1.1.1
-                dns_resolver_2|2.2.2.2
+                dns_resolver1|1.1.1.1
+                dns_resolver2|2.2.2.2
                 du_url|test.user@platform9.com
                 manage_hostname|TRUE
                 manage_resolver|True
@@ -105,8 +105,8 @@ class TestConfigCreate(TestCase):
                     '--proxy_url=-', 
                     '--manage_hostname=TRUE', 
                     '--manage_resolver=True', 
-                    '--dns_resolver_1=1.1.1.1', 
-                    '--dns_resolver_2=2.2.2.2'], 
+                    '--dns_resolver1=1.1.1.1', 
+                    '--dns_resolver2=2.2.2.2'], 
                 obj=self.obj_test)
 # !!! Need to compaire elements of both config files
 # !!! They are strings so either readline and evaluate each against other file or split('\n', list).sort()
@@ -134,8 +134,8 @@ class TestConfigList(TestCase):
                 os_region|region1
                 os_username|test.user@platform9.com
                 proxy_url|-
-                dns_resolver_1|1.1.1.1
-                dns_resolver_2|2.2.2.2
+                dns_resolver1|1.1.1.1
+                dns_resolver2|2.2.2.2
                 du_url|test.user@platform9.com
                 manage_hostname|TRUE
                 manage_resolver|True

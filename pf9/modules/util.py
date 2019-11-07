@@ -26,9 +26,9 @@ class Utils:
             if 'proxy_url' in line:
                 line = line.strip()
                 config.update( {'proxy_url' : line.replace('proxy_url|','')} )
-            if 'dns_resolver_1' in line:
+            if 'dns_resolver1' in line:
                 line = line.strip()
-                config.update( {'dns_resolver_1' : line.replace('dns_resolver_1|','')} )
+                config.update( {'dns_resolver1' : line.replace('dns_resolver1|','')} )
             if 'dns_resolver_2' in line:
                 line = line.strip()
                 config.update( {'dns_resolver_2' : line.replace('dns_resolver_2|','')} )
