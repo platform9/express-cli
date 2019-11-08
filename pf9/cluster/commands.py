@@ -1,33 +1,11 @@
 import click
 import os
 from prettytable import PrettyTable
-import shutil
 import shlex
+from string import Template
 import subprocess
 import tempfile
 from ..modules.ostoken import GetToken
-
-
-inventory_file_template_str = '''
-##
-## Ansible Inventory
-##
-[all]
-[all:vars]
-ansible_user=@@ssh_user@@
-ansible_ssh_pass=@@ssh_pass@@
-ansible_ssh_private_key_file=~/.ssh/id_rsa
-
-[hypervisors]
-
-################################################################################################
-## Kubernetes Groups
-################################################################################################
-[pmk:children]
-k8s_worker
-
-[k8s_worker]
-'''
 
 def run_command(command, run_env=os.environ):
     try:
@@ -51,20 +29,42 @@ def run_express(ctx, inv_file):
 def build_express_inventory_file(ctx, user, password, ssh_key, ips,
                                  only_local_node=False, node_prep_only=False):
     inv_file_path = None
+    inv_tpl_contents = None
+    node_details = ''
+    # Read in inventory template file
+    cur_dir_path = os.path.dirname(os.path.realpath(__file__))
+    inv_file_template = os.path.join(cur_dir_path, '..', 'templates',
+                                     'pmk_localhost_inventory.tpl')
+
+    with open(inv_file_template) as f:
+        inv_tpl_contents = f.read()
+
     if node_prep_only:
         # Create a temp inventory file
-        inv_file = tempfile.NamedTemporaryFile(prefix='pf9_', dir=tempfile.gettempdir())
-        inv_file_path = inv_file.name
+        tmp_dir = tempfile.mkdtemp(prefix='pf9_')
+        inv_file_path = os.path.join(tmp_dir, 'exp-inventory')
 
         if only_local_node:
-            inv_file.close()
-            cur_dir_path = os.path.dirname(os.path.realpath(__file__))
-            local_node_template = os.path.join(cur_dir_path, '..', 'templates',
-                                               'pmk_localhost_inventory.tpl')
-            shutil.copyfile(local_node_template, inv_file_path)
+            node_details = 'localhost ansible_connection=local ansible_host=localhost\n'
         else:
             # Build the great inventory file
-            inv_file.close()
+            for ip in ips:
+                if ip == 'localhost':
+                    node_info = 'localhost ansible_connection=local ansible_host=localhost\n'
+                else:
+                    if password:
+                        node_info = '{0} ansible_user={1} ansible_ssh_pass={2}\n'.format(
+                                     ip, user, password)
+                    else:
+                        node_info = '{0} ansible_user={1} ansible_ssh_private_key_file={2}\n'.format(
+                                     ip, user, ssh_key)
+                node_details = "".join((node_details, node_info))
+
+        inv_template = Template(inv_tpl_contents)
+        file_data = inv_template.safe_substitute(node_details=node_details)
+        with open(inv_file_path, 'w') as inv_file:
+            inv_file.write(file_data)
+        
     else:
         # Build inventory file in specific dir hierarchy
         # TODO: to be implemented
