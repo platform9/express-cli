@@ -26,6 +26,8 @@ def cli(ctx):
     ctx.obj['pf9_dir'] = os.path.join(ctx.obj['home_dir'], 'pf9/')
     ctx.obj['pf9_exp_dir'] = os.path.join(ctx.obj['pf9_dir'], 'pf9-express/')
     ctx.obj['pf9_exp_conf_dir'] = os.path.join(ctx.obj['pf9_exp_dir'], 'config/')
+    ctx.obj['pf9_exp_ansible_runner'] = os.path.join(ctx.obj['pf9_exp_dir'],
+                                                     'express', 'pf9-express')
 
 cli.add_command(version)
 cli.add_command(config)
