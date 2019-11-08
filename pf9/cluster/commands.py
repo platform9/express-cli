@@ -45,7 +45,7 @@ def run_express(ctx, inv_file):
     # TODO: Make this run only PMK tasks
     cmd = 'sudo {0} -a -b -v {1} -c {2} pmk'.format(exp_ansible_runner, inv_file,
                                                     exp_config_file)
-    run_command(cmd)
+    return run_command(cmd)
 
 # NOTE: a utils file may be a better location for these helper methods
 def build_express_inventory_file(ctx, user, password, ssh_key, ips,
