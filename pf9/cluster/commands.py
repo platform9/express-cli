@@ -2,10 +2,70 @@ import click
 import os
 from prettytable import PrettyTable
 from ..modules.ostoken import GetToken
+from ..modules.util import Utils
+from .cluster_create import CreateCluster
 
 @click.group()
 def cluster():
     """Platform9 Managed Kuberenetes Cluster"""
+
+@cluster.command('create')
+@click.option('--cluster_name', help='cluster name', prompt='Cluster Name')
+@click.option('--masterVip', help='IP address for VIP for master nodes', prompt='Master VIP')
+@click.option('--masterVipIf', help='Interface name for master/worker node', prompt='Master VIP Interface name')
+@click.option('--metallbCidr', help='IP range for MetalLB (<startIP>-<endIp>)', prompt='MetalLB IP Range')
+@click.option('--containersCidr', type=str, required=False, default='10.20.0.0/16', help="CIDR for container overlay")
+@click.option('--servicesCidr', type=str, required=False, default='10.21.0.0/16', help="CIDR for services overlay")
+@click.option('--externalDnsName', type=str, required=False, default='', help="External DNS name for master VIP")
+@click.option('--privileged', type=bool, required=False, default=True, help="Enable privileged mode for Kubernetes API")
+@click.option('--appCatalogEnabled', type=bool, required=False, default=True, help="Enable Helm application catalog")
+@click.option('--allowWorkloadsOnMaster', type=bool, required=False, default=False, help="Taint master nodes (to enable workloads)")
+@click.option("--networkPlugin", type=str, required=False, default='flannel', help="Specify non-default network plugin (default = flannel)")
+@click.pass_context
+def create(ctx, **kwargs):
+    """Create a Kubernetes cluster."""
+    # MOVE TO MODULE!!!
+    # Get Variables from Config
+    config_file = os.path.join(ctx.obj['pf9_exp_conf_dir'], 'express.conf')
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, 'r') as data:
+                config_file_lines = data.readlines()
+        except:
+            click.echo('Failed reading %s: '% config_file)
+        config = Utils().config_to_dict(config_file_lines)
+        if config is not None:
+            ctx.params['du_url'] = config["du_url"]
+            ctx.params['du_username'] = config["os_username"]
+            ctx.params['du_password'] = config["os_password"]
+            ctx.params['du_tenant'] = config["os_tenant"]
+    else:
+        click.echo('No active config. Please define or activate a config.')
+
+    # Get Token and Tenant ID (app pulling tenant_ID "project_id" into get_token)
+    ctx.params['project_id'] = GetToken().get_project_id(
+                config["du_url"],
+                config["os_username"],
+                config["os_password"],
+                config["os_tenant"] )
+    ctx.params['token'] = GetToken().get_token_v3(
+                config["du_url"],
+                config["os_username"],
+                config["os_password"],
+                config["os_tenant"] )
+       
+    # create cluster
+    click.echo("[Creating Cluster: {}]".format(ctx.params['cluster_name']))
+    cluster_status, cluster_uuid = CreateCluster(ctx).cluster_exists()
+        
+    if cluster_status == True:
+        click.echo("cluster already exists")
+    else:
+        CreateCluster(ctx).create_cluster()
+        cluster_uuid = CreateCluster(ctx).wait_for_cluster()
+        click.echo("--> UUID = {}".format(cluster_uuid))
+
+
 
 @cluster.command('list')
 def define(cluster_list):
@@ -98,27 +158,10 @@ def add_node(cluster):
     else:
         click.echo('There is no defined cluster by the name of %s' % cluster)
 
-# @cluster.command('add-node')
-# @click.argument('cluster')
-# @click.argument('node')
-# def add_node(cluster, node):
-#     """Add a node to a Kubernetes cluster after cluster creation."""
-#     # add node to cluster inventory file and run pf9-express for node
-#     click.echo('WIP')
-
-
-@cluster.command('create')
-@click.argument('cluster')
-def create(cluster):
-    """Create a defined Kubernetes cluster."""
-    # create a defined cluster in qbert and add defined nodes to cluster
-    click.echo('WIP')
-
-
-@cluster.command('destroy')
-@click.argument('cluster')
-def destroy(cluster):
-    """Delete a Kuberenetes cluster."""
-    # deauthorize defined nodes in a kuberenetes cluster and delete cluster in qbert
-    click.echo('WIP')
+#@cluster.command('destroy')
+#@click.argument('cluster')
+#def destroy(cluster):
+#    """Delete a Kuberenetes cluster."""
+#    # deauthorize defined nodes in a kuberenetes cluster and delete cluster in qbert
+#    click.echo('WIP')
 

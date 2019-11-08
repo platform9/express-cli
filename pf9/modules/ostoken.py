@@ -11,7 +11,7 @@ import sys
 
 class GetToken:
 
-    def get_token_v3(self, host, username, password, tenant):
+    def os_auth(self, host, username, password, tenant):
         keystone_endpoint = '%s/keystone/v3/auth/tokens?nocatalog' % host
         headers = {"Content-Type": "application/json"}
         body = {
@@ -41,5 +41,19 @@ class GetToken:
             print("{0}: {1}".format(r.status_code, r.text))
             sys.exit(1)
      
-        token = r.headers['X-Subject-Token']
+        response = {
+                "headers": r.headers,
+                "json": r.json()
+                }
+        return response 
+
+    def get_token_v3(self, host, username, password, tenant):
+        os_auth_req = self.os_auth(host, username, password, tenant)
+        token = os_auth_req['headers']['X-Subject-Token']
         return token
+
+    def get_project_id(self, host, username, password, tenant):
+        os_auth_req = self.os_auth(host, username, password, tenant)
+        project_id = os_auth_req['json']['token']['project']['id']
+        return project_id
+
