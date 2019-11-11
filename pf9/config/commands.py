@@ -8,7 +8,8 @@ from ..modules.util import Utils
 @click.group()
 def config():
     """Configure Platform9 Express."""
-def manage_dns_resolvers(ctx, param, man_resolvers):
+
+def manage_dns_resolvers(ctx, man_resolvers):
     if man_resolvers:
         if not ctx.params['dns_resolver1']:
             ctx.params['dns_resolver1'] = click.prompt('Enter DNS Resolver 1')
@@ -30,11 +31,14 @@ def manage_dns_resolvers(ctx, param, man_resolvers):
 @click.option('--manage_hostname', default=False)
 @click.option('--dns_resolver1', default='')
 @click.option('--dns_resolver2', default='')
-@click.option('--manage_resolver', type=bool, default=False, callback=manage_dns_resolvers)
+@click.option('--manage_resolver', type=bool, default=False)
 @click.pass_context
 def create(ctx, **kwargs):
     """Create Platform9 Express config."""
     # creates and activates pf9-express config file
+
+    # Handle DNS resolvers first
+    manage_dns_resolvers(ctx, ctx.params['manage_resolver'])
 
     pf9_exp_conf_dir = ctx.obj['pf9_exp_conf_dir']
     
