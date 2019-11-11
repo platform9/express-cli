@@ -8,16 +8,17 @@ from ..modules.util import Utils
 @click.group()
 def config():
     """Configure Platform9 Express."""
-def manage_dns_resolvers(ctx, param, man_resolvers):
-    if man_resolvers:
-        if not ctx.params['dns_resolver1']:
+def manage_dns_resolvers(ctx, param, value):
+    if value:
+        if ctx.params['dns_resolver1'] is None:
             ctx.params['dns_resolver1'] = click.prompt('Enter DNS Resolver 1')
-        if not ctx.params['dns_resolver2']:
+        if ctx.params['dns_resolver2'] is None:
             ctx.params['dns_resolver2'] = click.prompt('Enter DNS Resolver 2')
     else:
         ctx.params['dns_resolver1'] = "8.8.8.8"
         ctx.params['dns_resolver2'] = "8.8.4.4"
-    return man_resolvers
+    return value 
+
 
 @config.command('create')
 @click.option('--config_name', '--name', required=True, prompt='Config name')
@@ -26,11 +27,11 @@ def manage_dns_resolvers(ctx, param, man_resolvers):
 @click.option('--os_password', required=True, prompt='Platform9 password', hide_input=True)
 @click.option('--os_region', required=True, prompt='Platform9 region')
 @click.option('--os_tenant', required=True, prompt='Platform9 tenant', default='service')
-@click.option('--proxy_url', required=True, prompt='Proxy url for internet access', default='-')
-@click.option('--manage_hostname', required=True, prompt='Have Platform9 Express manage hostnames', default=False)
-@click.option('--dns_resolver1', prompt='Enter DNS resolver 1', is_eager=True, default='')
-@click.option('--dns_resolver2', prompt='Enter DNS resolver 2', is_eager=True, default='')
-@click.option('--manage_resolver', required=True, type=bool, prompt='Have Platform9 Express manage DNS resolvers', default=False, callback=manage_dns_resolvers)
+@click.option('--proxy_url', default='-')
+@click.option('--manage_hostname', default=False)
+@click.option('--dns_resolver1', is_eager=True)
+@click.option('--dns_resolver2', is_eager=True)
+@click.option('--manage_resolver', type=bool, default=False, callback=manage_dns_resolvers)
 @click.pass_context
 def create(ctx, **kwargs):
     """Create Platform9 Express config."""
