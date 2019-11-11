@@ -8,17 +8,17 @@ from ..modules.util import Utils
 @click.group()
 def config():
     """Configure Platform9 Express."""
-
-def manage_dns_resolvers(ctx, man_resolvers):
-    if man_resolvers:
-        if not ctx.params['dns_resolver1']:
+def manage_dns_resolvers(ctx, param, value):
+    if value:
+        if ctx.params['dns_resolver1'] is None:
             ctx.params['dns_resolver1'] = click.prompt('Enter DNS Resolver 1')
-        if not ctx.params['dns_resolver2']:
+        if ctx.params['dns_resolver2'] is None:
             ctx.params['dns_resolver2'] = click.prompt('Enter DNS Resolver 2')
     else:
         ctx.params['dns_resolver1'] = "8.8.8.8"
         ctx.params['dns_resolver2'] = "8.8.4.4"
-    return man_resolvers
+    return value 
+
 
 @config.command('create')
 @click.option('--config_name', '--name', required=True, prompt='Config name')
@@ -29,16 +29,13 @@ def manage_dns_resolvers(ctx, man_resolvers):
 @click.option('--os_tenant', required=True, prompt='Platform9 tenant', default='service')
 @click.option('--proxy_url', default='-')
 @click.option('--manage_hostname', default=False)
-@click.option('--dns_resolver1', default='')
-@click.option('--dns_resolver2', default='')
-@click.option('--manage_resolver', type=bool, default=False)
+@click.option('--dns_resolver1', is_eager=True)
+@click.option('--dns_resolver2', is_eager=True)
+@click.option('--manage_resolver', type=bool, default=False, callback=manage_dns_resolvers)
 @click.pass_context
 def create(ctx, **kwargs):
     """Create Platform9 Express config."""
     # creates and activates pf9-express config file
-
-    # Handle DNS resolvers first
-    manage_dns_resolvers(ctx, ctx.params['manage_resolver'])
 
     pf9_exp_conf_dir = ctx.obj['pf9_exp_conf_dir']
     

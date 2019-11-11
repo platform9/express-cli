@@ -63,7 +63,7 @@ class TestPf9ExpVersion(TestCase):
             assert (self.version_id in result_3.output)
 
 
-class TestConfigCreate(TestCase):
+class TestConfigCreateFull(TestCase):
     # ToDo: Need better method for test dir. Can not write to unittest temp dir from click methods
     #       Not currently able to test logic and actions if file or directories need to be created.
     @classmethod
@@ -108,6 +108,8 @@ class TestConfigCreate(TestCase):
                     '--dns_resolver1=1.1.1.1', 
                     '--dns_resolver2=2.2.2.2'], 
                 obj=self.obj_test)
+        assert (result.exit_code == 0)
+        assert ('Successfully wrote Platform9 Express configuration' in result.output)
 # !!! Need to compaire elements of both config files
 # !!! They are strings so either readline and evaluate each against other file or split('\n', list).sort()
 #        with open(os.path.join(self.conf_dir, 'express.conf'), 'r') as read_test_conf:
@@ -116,9 +118,51 @@ class TestConfigCreate(TestCase):
 #        self.expected_config.strip().sort()
 #>       self.expected_config.strip().sort()
 #E       AttributeError: 'str' object has no attribute 'sort'
+#        assert (test_config == self.expected_config) 
+
+class TestConfigCreateMinimal(TestCase):
+    # ToDo: Need better method for test dir. Can not write to unittest temp dir from click methods
+    #       Not currently able to test logic and actions if file or directories need to be created.
+    @classmethod
+    def setUp(self):
+        self.log = logging.getLogger('Running setUp for: '+ inspect.currentframe().f_code.co_name)
+        self.temp_dir = tempfile.mkdtemp()
+        os.makedirs(os.path.join(self.temp_dir, 'pf9/pf9-express/'), 0o755)
+        self.conf_dir = os.path.join(self.temp_dir, 'pf9/pf9-express/config/')
+        os.makedirs(self.conf_dir, 0o755)
+        self.obj_test = dict({'pf9_exp_conf_dir': self.conf_dir})
+        self.expected_config = '''
+                config_name|test
+                os_region|region1
+                os_username|test.user@platform9.com
+                proxy_url|-
+                dns_resolver1|8.8.8.8
+                dns_resolver2|8.8.4.4
+                du_url|test.user@platform9.com
+                manage_hostname|False
+                manage_resolver|False
+                os_password|testpass
+                os_tenant|service
+                '''
+
+    @classmethod
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_config_create_cli_options(self):
+        runner = CliRunner()
+            #result = runner.invoke(cli_config_create, obj=self.obj_test)
+        result = runner.invoke(cli_config_create, 
+                ['--name=test', 
+                    '--du_url=test@platform9.com', 
+                    '--os_username=test.user@platform9.com', 
+                    '--os_password=testpass', 
+                    '--os_region=region1', 
+                    '--os_tenant=service'], 
+                obj=self.obj_test)
         assert (result.exit_code == 0)
         assert ('Successfully wrote Platform9 Express configuration' in result.output)
-#        assert (test_config == self.expected_config) 
+# !!! Need to compaire elements of both config files
 
 
 class TestConfigList(TestCase):
