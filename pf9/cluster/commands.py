@@ -34,7 +34,7 @@ def build_express_inventory_file(ctx, user, password, ssh_key, ips,
     # Read in inventory template file
     cur_dir_path = os.path.dirname(os.path.realpath(__file__))
     inv_file_template = os.path.join(cur_dir_path, '..', 'templates',
-                                     'pmk_localhost_inventory.tpl')
+                                     'pmk_inventory.tpl')
 
     with open(inv_file_template) as f:
         inv_tpl_contents = f.read()
