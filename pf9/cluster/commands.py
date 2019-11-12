@@ -1,18 +1,87 @@
 import click
 import os
 from prettytable import PrettyTable
+import shlex
+from string import Template
+import subprocess
+import tempfile
 from ..modules.ostoken import GetToken
+
+def run_command(command, run_env=os.environ):
+    try:
+        out = subprocess.check_output(shlex.split(command), env=run_env)
+        # Command was successful, return code must be 0 with relevant output
+        return 0, out
+    except subprocess.CalledProcessError as e:
+        click.echo('%s command failed: %s', command, e)
+        return e.returncode, e.output
+
+def run_express(ctx, inv_file):
+    # Build the pf9-express command to run
+    exp_ansible_runner = os.path.join(ctx.obj['pf9_exp_dir'], 'express', 'pf9-express')
+    exp_config_file = os.path.join(ctx.obj['pf9_exp_dir'], 'config', 'express.conf')
+    # TODO: Make this run only PMK tasks
+    cmd = 'sudo {0} -a -b -v {1} -c {2} pmk'.format(exp_ansible_runner, inv_file,
+                                                    exp_config_file)
+    return run_command(cmd)
+
+# NOTE: a utils file may be a better location for these helper methods
+def build_express_inventory_file(ctx, user, password, ssh_key, ips,
+                                 only_local_node=False, node_prep_only=False):
+    inv_file_path = None
+    inv_tpl_contents = None
+    node_details = ''
+    # Read in inventory template file
+    cur_dir_path = os.path.dirname(os.path.realpath(__file__))
+    inv_file_template = os.path.join(cur_dir_path, '..', 'templates',
+                                     'pmk_inventory.tpl')
+
+    with open(inv_file_template) as f:
+        inv_tpl_contents = f.read()
+
+    if node_prep_only:
+        # Create a temp inventory file
+        tmp_dir = tempfile.mkdtemp(prefix='pf9_')
+        inv_file_path = os.path.join(tmp_dir, 'exp-inventory')
+
+        if only_local_node:
+            node_details = 'localhost ansible_connection=local ansible_host=localhost\n'
+        else:
+            # Build the great inventory file
+            for ip in ips:
+                if ip == 'localhost':
+                    node_info = 'localhost ansible_connection=local ansible_host=localhost\n'
+                else:
+                    if password:
+                        node_info = '{0} ansible_user={1} ansible_ssh_pass={2}\n'.format(
+                                     ip, user, password)
+                    else:
+                        node_info = '{0} ansible_user={1} ansible_ssh_private_key_file={2}\n'.format(
+                                     ip, user, ssh_key)
+                node_details = "".join((node_details, node_info))
+
+        inv_template = Template(inv_tpl_contents)
+        file_data = inv_template.safe_substitute(node_details=node_details)
+        with open(inv_file_path, 'w') as inv_file:
+            inv_file.write(file_data)
+        
+    else:
+        # Build inventory file in specific dir hierarchy
+        # TODO: to be implemented
+        pass
+
+    return inv_file_path
 
 @click.group()
 def cluster():
     """Platform9 Managed Kuberenetes Cluster"""
 
-@cluster.command('list')
+@cluster.command('list', hidden=True)
 def define(cluster_list):
   click.echo('WIP -- cluster.cluster_list')
 
 
-@cluster.command('define')
+@cluster.command('define', hidden=True)
 @click.argument('cluster')
 @click.option('--user', '-u', required=True, help='Username for cluster nodes.')
 @click.option('--password', '-p', help='Password for cluster nodes.')
@@ -74,7 +143,7 @@ def define(cluster):
         click.echo('A cluster by the name of %s already exists' % cluster)
 
 
-@cluster.command('add-node')
+@cluster.command('add-node', hidden=True)
 @click.argument('cluster')
 @click.option('--user', '-u', help='Username for node if different than cluster default.')
 @click.option('--password', '-p', help='Password for node if different than cluster default.')
@@ -107,7 +176,7 @@ def add_node(cluster):
 #     click.echo('WIP')
 
 
-@cluster.command('create')
+@cluster.command('create', hidden=True)
 @click.argument('cluster')
 def create(cluster):
     """Create a defined Kubernetes cluster."""
@@ -115,10 +184,28 @@ def create(cluster):
     click.echo('WIP')
 
 
-@cluster.command('destroy')
+@cluster.command('destroy', hidden=True)
 @click.argument('cluster')
 def destroy(cluster):
     """Delete a Kuberenetes cluster."""
     # deauthorize defined nodes in a kuberenetes cluster and delete cluster in qbert
     click.echo('WIP')
 
+@cluster.command('prep-node')
+@click.option('--user', '-u', help='Username for node.')
+@click.option('--password', '-p', help='Password for node if different than cluster default.')
+@click.option('--ssh-key', '-s', help='SSH key for node if different than cluster default.')
+@click.option('--ips', '-i', multiple=True, help='IPs of the host to be prepped.', default='localhost')
+@click.pass_context
+def prepnode(ctx, user, password, ssh_key, ips):
+    only_local_node = False
+    if len(ips) == 1 and ips[0] == 'localhost':
+        only_local_node = True
+        click.echo('Prepping the local node to be added to Platform9 Managed Kubernetes')
+
+    inv_file = build_express_inventory_file(ctx, user, password, ssh_key, ips,
+                                            only_local_node, node_prep_only=True)
+    rcode, output = run_express(ctx, inv_file)
+
+    #TODO: Report success/failure
+    click.echo('WIP')
