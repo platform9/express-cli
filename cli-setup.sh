@@ -10,7 +10,7 @@ cli_setup_dir=/opt/pf9/cli
 install_prereqs() {
     echo -n "--> Validating package dependencies: "
     if [ "${platform}" == "ubuntu" ]; then
-    # add ansible repository
+        # add ansible repository
         dpkg-query -f '${binary:Package}\n' -W | grep ^ansible$ > /dev/null 2>&1
         if [ $? -ne 0 ]; then
             sudo apt-add-repository -y ppa:ansible/ansible > /dev/null 2>&1
@@ -26,14 +26,19 @@ install_prereqs() {
             echo -n "${pkg} "
             dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
             if [ $? -ne 0 ]; then
-            sudo apt-get -y install ${pkg} >> ${log} 2>&1
-            if [ $? -ne 0 ]; then
-                echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
-                tail -10 ${log}; exit 1
-            fi
+                sudo apt-get -y install ${pkg} >> ${log} 2>&1
+                if [ $? -ne 0 ]; then
+                    echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+                    tail -10 ${log}; exit 1
+                fi
             fi
         done
+    else
+        echo -e "\nERROR: Unsupported platform ${platform}"; exit 1
+    fi
+}
 
+install_pip_prereqs() {
         ## upgrade pip
         sudo ${cli_setup_dir}/bin/pip install --upgrade pip >> ${log} 2>&1
         if [ $? -ne 0 ]; then
@@ -51,9 +56,6 @@ install_prereqs() {
             fi
         done
         echo
-    else
-        echo -e "\nERROR: Unsupported platform ${platform}"; exit 1
-    fi
 
     # create log directory
     if [ ! -d /var/log/pf9 ]; then sudo mkdir -p /var/log/pf9; fi
@@ -97,22 +99,32 @@ ensure_py_pip_setup() {
         if [ $? -ne 0 ]; then
             #YUCK.. Need this hack for Ubuntu16.04
             if [ "${platform}" == "ubuntu" ]; then
+                sudo apt-get update> /dev/null 2>&1 # python3-venv install fails on fresh ubuntu wihtout an update
                 sudo apt-get -y install python3-venv
             fi
-            # TODO: Error handling
+            if [ $? -ne 0 ]; then
+                echo -e "\nERROR: failed to install python3-venv - here's the last 10 lines of the log:\n"
+                tail -10 ${log}; exit 1
+            fi
             curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
-            ${py3_exec} /tmp/get-pip.py
+            sudo {py3_exec} /tmp/get-pip.py
         fi
     else
         pip2_exec=$(which pip)
         if [ $? -ne 0 ]; then
-            # TODO: Error handling
             curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
-            ${py2_exec} /tmp/get-pip.py
+            sudo ${py2_exec} /tmp/get-pip.py
+            if [ $? -ne 0 ]; then
+                echo -e "\nERROR: failed to install pip.\n"
+                exit 1
+            fi
             venv_exec=$(which virtualenv)
             if [ $? -ne 0 ]; then
-                # TODO: Error handling
-                ${pip2_exec} install virtualenv
+                sudo ${pip2_exec} install virtualenv
+                if [ $? -ne 0 ]; then
+                    echo -e "\nERROR: failed to install virtualenv.\n"
+                    exit 1
+                fi
             fi
         fi
     fi
@@ -155,15 +167,14 @@ setup_express() {
     read -p "Platform9 username: " USER
     read -sp "Platform9 user password: " PASS
     read -p "Platform9 user tenant: " PROJECT
-    ${cli_setup_dir}/bin/express config create --config_name ${configname} --du_url ${DUFQDN} --os_username ${USER} --os_password ${PASS} --os_region ${REGION} --os_tenant {PROJECT}
-
-    #TODO: Create symlink to the exec
+    ${cli_setup_dir}/bin/express config create --config_name pf9-express ${configname} --du ${DUFQDN} --os_username ${USER} --os_password ${PASS} --os_region ${REGION} --os_tenant ${PROJECT}
+    sudo ln -s ${cli_setup_dir}/bin/express /usr/bin/express
 }
 
 while [ $# -gt 0 ]; do
     case ${1} in
     -t|--test)
-        flag_testsetup=1 
+        flag_testsetup=1
     ;;
     -l|--log)
         log=${2}
@@ -175,11 +186,13 @@ done
 echo >> ${log} 2>&1
 echo "######################################" >> ${log} 2>&1
 echo "Start install of Platform9 CLI $(date)" >> ${log} 2>&1
-process_inputs
+#process_inputs
 validate_platform
+install_prereqs
 ensure_py_pip_setup
 setup_venv
 
 # All operations below occur inside the venv
-install_prereqs
+install_pip_prereqs
 setup_express
+
