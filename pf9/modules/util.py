@@ -1,4 +1,6 @@
+import netifaces
 import json
+import re
 import requests
 import os
 import click
@@ -64,7 +66,38 @@ class Utils:
             if 'manage_resolver' in line:
                 line = line.strip()
                 config.update( {'manage_resolver' : line.replace('manage_resolver|','')} )
-        return config        
+        return config
+
+    def get_local_node_addresses(self):
+        """
+        Get non local IPv4 addresses
+        """
+        nw_ifs = netifaces.interfaces()
+        nonlocal_ips = set()
+        ignore_ip_re = re.compile('^(0.0.0.0|127.0.0.1)$')
+        ignore_if_re = re.compile('^(q.*-[0-9a-fA-F]{2}|tap.*)$')
+
+        for iface in nw_ifs:
+            if ignore_if_re.match(iface):
+                continue
+            addrs = netifaces.ifaddresses(iface)
+            try:
+                if netifaces.AF_INET in addrs:
+                    ips = addrs[netifaces.AF_INET]
+                    for ip in ips:
+                        # Not interested in loopback IPs
+                        if not ignore_ip_re.match(ip['addr']):
+                            nonlocal_ips.add(ip['addr'])
+                else:
+                    # move to next interface if this interface doesn't
+                    # have IPv4 addresses
+                    continue
+            except KeyError:
+                pass
+
+        return list(nonlocal_ips)
+
+
 
 class Pf9ExpVersion:
     ''' Methods for managing PF9 Versions'''

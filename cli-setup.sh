@@ -88,7 +88,7 @@ ensure_py_pip_setup() {
         py2_exec=$(which python2)
         if [ $? -ne 0 ]; then
             # report no python error and quit
-            echo "Ayyyoooo"
+            echo "Error"
         fi
         py_exec=${py2_exec}
     fi

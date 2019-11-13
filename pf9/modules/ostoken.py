@@ -57,3 +57,10 @@ class GetToken:
         project_id = os_auth_req['json']['token']['project']['id']
         return project_id
 
+    def get_token_project(self, host, username, password, tenant):
+        os_auth_req = self.os_auth(host, username, password, tenant)
+        token = os_auth_req['headers']['X-Subject-Token']
+        project_id = os_auth_req['json']['token']['project']['id']
+        return token, project_id
+
+

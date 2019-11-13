@@ -34,7 +34,7 @@ class CreateCluster(object):
             if pf9_response.status_code != 200:
                 return None
 
-            # parse resmgr response
+            # parse response
             try:
                 json_response = json.loads(pf9_response.text)
             except:
@@ -98,7 +98,7 @@ class CreateCluster(object):
         except:
             return False, None
 
-        # parse resmgr response
+        # parse response
         try:
             json_response = json.loads(pf9_response.text)
         except:
