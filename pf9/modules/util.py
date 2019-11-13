@@ -1,5 +1,31 @@
 import json
 import requests
+import os
+import click
+
+class GetConfig(object):
+    def __init__(self, ctx):
+        self.ctx = ctx
+
+    def GetActiveConfig(self):
+        # Load Active config into ctx 
+        config_file = os.path.join(self.ctx.obj['pf9_exp_conf_dir'], 'express.conf')
+        if os.path.exists(config_file):
+            try:
+                with open(config_file, 'r') as data:
+                    config_file_lines = data.readlines()
+            except:
+                click.echo('Failed reading %s: '% config_file)
+            config = Utils().config_to_dict(config_file_lines)
+            if config is not None:
+                self.ctx.params['du_url'] = config["du_url"]
+                self.ctx.params['du_username'] = config["os_username"]
+                self.ctx.params['du_password'] = config["os_password"]
+                self.ctx.params['du_tenant'] = config["os_tenant"]
+            return self.ctx
+        else:
+            click.echo('No active config. Please define or activate a config.')
+
 
 class Utils:
     def config_to_dict(self, config_file):
