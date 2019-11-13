@@ -130,7 +130,7 @@ def create(ctx, **kwargs):
 
 def attach(ctx, **kwargs):
     """Add Nodes to an existing Kubernetes cluster."""
-    if master_nodes is None and work_nodes is None:
+    if ctx.params['master_nodes'] is None and ctx.params['work_nodes'] is None:
         click.echo("Either master_nodes or worker_nodes must be provided")
         sys.exit(1)
 
@@ -157,15 +157,15 @@ def attach(ctx, **kwargs):
         
     click.echo("Discovering UUIDs for Cluster Nodes")
     # get uuids for master nodes
-    if master_nodes is not None:
-        master_node_uuids = ClusterUtils(ctx).get_uuids(master_nodes.split(','))
+    if ctx.params['master_nodes'] is not None:
+        master_node_uuids = ClusterUtils(ctx).get_uuids(ctx.params['master_nodes'].split(','))
         click.echo("--> Master Nodes")
         for node in master_node_uuids:
             click.echo("{}".format(node))
 
     # get uuids for worker nodes
-    if work_nodes is not None:
-        worker_node_uuids = ClusterUtils(ctx).get_uuids(worker_nodes.split(','))
+    if ctx.params['master_nodes'] is not None:
+        worker_node_uuids = ClusterUtils(ctx).get_uuids(ctx.params['worker_nodes'].split(','))
         click.echo("--> Worker Nodes")
         for node in worker_node_uuids:
             click.echo("{}".format(node))
@@ -173,11 +173,11 @@ def attach(ctx, **kwargs):
     click.echo("[Attaching nodes to Cluster: {}]".format(ctx.params['cluster_name']))
 
     # attach master nodes
-    ClusterAttach(ctx).attach_to_cluster(cluster_uuid, 'master', master_nodes)
-    ClusterUtils(ctx).wait_for_n_active_masters(project_id,args.cluster_name,len(master_nodes))
+    ClusterAttach(ctx).attach_to_cluster(cluster_uuid, 'master', master_node_uuids)
+    ClusterUtils(ctx).wait_for_n_active_masters(len(ctx.params['master_nodes'].split(',')))
 
     # attach worker nodes
-    ClusterAttach(ctx).attach_to_cluster(cluster_uuid, project_id, 'worker', worker_nodes)
+    ClusterAttach(ctx).attach_to_cluster(cluster_uuid, 'worker', worker_node_uuids)
 
 
 

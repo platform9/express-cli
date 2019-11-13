@@ -1,11 +1,12 @@
 import os
 import sys
 import time
-import requests
 import json
 import click
 from .cluster_utils import ClusterUtils
-
+import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 class ClusterAttach(object):
     def __init__(self, ctx):
@@ -15,7 +16,7 @@ class ClusterAttach(object):
         self.du_url = ctx.params['du_url']
         self.headers = { 'content-type': 'application/json', 'X-Auth-Token': self.token }
 
-    def attach_to_cluster(self, ctx, cluster_uuid, node_type, uuid_list):
+    def attach_to_cluster(self, cluster_uuid, node_type, uuid_list):
         click.echo("[Attaching {} Nodes to Cluster]".format(node_type))
 
         # configure attach payload (master nodes)
@@ -40,7 +41,7 @@ class ClusterAttach(object):
         timeout = int(time.time()) + (60 * TIMEOUT)
         flag_cluster_ready = False
         while True:
-            cluster_status = ClusterUtils(ctx).cluster_convergence_status(cluster_uuid)
+            cluster_status = ClusterUtils(self.ctx).cluster_convergence_status(cluster_uuid)
             click.echo("waiting for cluster to become ready, status = {}".format(cluster_status))
             if cluster_status == "ok":
                 flag_cluster_ready = True
@@ -52,7 +53,7 @@ class ClusterAttach(object):
 
         # enforce TIMEOUT
         if not flag_cluster_ready:
-            ClusterUtils().fail_bootstrap("TIMEOUT: waiting for cluster to become ready")
+            ClusterUtils(self.ctx).fail_bootstrap("TIMEOUT: waiting for cluster to become ready")
 
         # attach to cluster (retry loop)
         num_retries = 5
@@ -79,5 +80,4 @@ class ClusterAttach(object):
 
         if cnt >= num_retries:
             click.echo("Build Failed | {}".format(int(time.time())))
-            ClusterUtils().fail_bootstrap("failed to attach to cluster after {} attempts".format(num_retries))
-
+            ClusterUtils(self.ctx).fail_bootstrap("failed to attach to cluster after {} attempts".format(num_retries))

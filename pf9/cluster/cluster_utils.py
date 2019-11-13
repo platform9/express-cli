@@ -1,9 +1,12 @@
 import os
 import sys
 import time
-import requests
 import json
 import click
+from future.utils import iteritems 
+import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 class ClusterUtils(object):
     def __init__(self, ctx):
@@ -96,13 +99,13 @@ class ClusterUtils(object):
         return(cluster_uuid)
 
 
-    def wait_for_n_active_masters(self, ctx, master_node_num):
+    def wait_for_n_active_masters(self, master_node_num):
         TIMEOUT = 15
         POLL_INTERVAL = 30
         timeout = int(time.time()) + (60 * TIMEOUT)
         flag_found_n_masters = False
         while True:
-            n = get_num_active_masters(self.project_id, self.cluster_name)
+            n = self.get_num_active_masters()
             self.write_host("waiting for {} masters to become active (n={})".format(master_node_num,n))
             if int(n) == int(master_node_num):
                 flag_found_n_masters = True
@@ -117,7 +120,7 @@ class ClusterUtils(object):
             self.fail_bootstrap("TIMEOUT: waiting for {} masters to become active".format(master_node_num))
 
 
-    def get_num_active_masters(self, ctx):
+    def get_num_active_masters(self):
         num_active_masters = 0
         try:
             api_endpoint = "qbert/v3/{}/nodes".format(self.project_id)
@@ -149,7 +152,7 @@ class ClusterUtils(object):
         return(num_active_masters)
 
 
-    def get_resmgr_hostid(self, ctx, host_ip):
+    def get_resmgr_hostid(self, host_ip):
         try:
             api_endpoint = "resmgr/v1/hosts".format(self.project_id)
             pf9_response = requests.get("{}/{}".format(self.du_url, api_endpoint), verify=False, headers = self.headers)
@@ -168,13 +171,13 @@ class ClusterUtils(object):
         for host in json_response:
             if not 'extensions' in host:
                 continue
-            for key, value in host['extensions']['interfaces']['data'].iteritems():
-                for iface_name, iface_ip in host['extensions']['interfaces']['data']['iface_ip'].iteritems():
+            for key, value in iteritems(host['extensions']['interfaces']['data']):
+                for iface_name, iface_ip in iteritems(host['extensions']['interfaces']['data']['iface_ip']):
                     if iface_ip == host_ip:
                         return(host['id'])
 
 
-    def get_uuids(self, ctx, host_ips):
+    def get_uuids(self, host_ips):
         # map list of IPs to list of UUIDs
         host_uuids = []
         for host_ip in host_ips:
@@ -185,7 +188,7 @@ class ClusterUtils(object):
         return(host_uuids)
 
 
-    def cluster_convergence_status(cluster_uuid):
+    def cluster_convergence_status(self, cluster_uuid):
         converge_status = "pending"
         try:
             api_endpoint = "qbert/v3/{}/clusters/{}".format(self.project_id, cluster_uuid)
