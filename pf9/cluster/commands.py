@@ -8,7 +8,8 @@ import tempfile
 from ..modules.ostoken import GetToken
 from ..modules.util import GetConfig 
 from ..modules.util import Utils
-from .cluster_create import CreateCluster
+from .cluster_utils import ClusterUtils
+from .cluster_attach import ClusterAttach
 
 def run_command(command, run_env=os.environ):
     try:
@@ -111,14 +112,73 @@ def create(ctx, **kwargs):
        
     # create cluster
     click.echo("[Creating Cluster: {}]".format(ctx.params['cluster_name']))
-    cluster_status, cluster_uuid = CreateCluster(ctx).cluster_exists()
+    cluster_status, cluster_uuid = ClusterUtils(ctx).cluster_exists()
         
     if cluster_status == True:
         click.echo("cluster already exists")
     else:
-        CreateCluster(ctx).create_cluster()
-        cluster_uuid = CreateCluster(ctx).wait_for_cluster()
+        ClusterUtils(ctx).create_cluster()
+        cluster_uuid = ClusterUtils(ctx).wait_for_cluster()
         click.echo("--> UUID = {}".format(cluster_uuid))
+
+
+@cluster.command('attach')
+@click.option('--cluster_name', help='cluster name', prompt='Cluster Name')
+@click.option('--master_nodes', type=str, required=False, help='comma-delimited list of ip addresses', prompt='IP addresses of Master nodes')
+@click.option('--worker_nodes', type=str, required=False, help='comma-delimited list of ip addresses', prompt='IP addresses of Worker nodes')
+@click.pass_context
+
+def attach(ctx, **kwargs):
+    """Add Nodes to an existing Kubernetes cluster."""
+    if master_nodes is None and work_nodes is None:
+        click.echo("Either master_nodes or worker_nodes must be provided")
+        sys.exit(1)
+
+    # Load Active Config into ctx 
+    GetConfig(ctx).GetActiveConfig()
+    # Tenant ID
+    ctx.params['project_id'] = GetToken().get_project_id(
+                ctx.params["du_url"],
+                ctx.params["du_username"],
+                ctx.params["du_password"],
+                ctx.params["du_tenant"] )
+    # Get Token
+    ctx.params['token'] = GetToken().get_token_v3(
+                ctx.params["du_url"],
+                ctx.params["du_username"],
+                ctx.params["du_password"],
+                ctx.params["du_tenant"] )
+
+    try:
+        cluster_uuid = ClusterUtils(ctx).wait_for_cluster()
+    except:
+        click.echo("Cluster %s does not exist or is not available for node attachment" % cluster_uuid)
+        sys.exit(1) 
+        
+    click.echo("Discovering UUIDs for Cluster Nodes")
+    # get uuids for master nodes
+    if master_nodes is not None:
+        master_node_uuids = ClusterUtils(ctx).get_uuids(master_nodes.split(','))
+        click.echo("--> Master Nodes")
+        for node in master_node_uuids:
+            click.echo("{}".format(node))
+
+    # get uuids for worker nodes
+    if work_nodes is not None:
+        worker_node_uuids = ClusterUtils(ctx).get_uuids(worker_nodes.split(','))
+        click.echo("--> Worker Nodes")
+        for node in worker_node_uuids:
+            click.echo("{}".format(node))
+
+    click.echo("[Attaching nodes to Cluster: {}]".format(ctx.params['cluster_name']))
+
+    # attach master nodes
+    ClusterAttach(ctx).attach_to_cluster(cluster_uuid, 'master', master_nodes)
+    ClusterUtils(ctx).wait_for_n_active_masters(project_id,args.cluster_name,len(master_nodes))
+
+    # attach worker nodes
+    ClusterAttach(ctx).attach_to_cluster(cluster_uuid, project_id, 'worker', worker_nodes)
+
 
 
 
