@@ -5,7 +5,6 @@ import time
 import requests
 import json
 import signal
-import ConfigParser
 
 # global variables
 control_plane_pause = 30
@@ -38,7 +37,7 @@ class AttachCluster(object):
                                         headers=self.headers)
             if pf9_response.status_code != 200:
                 return False, None
-        
+ 
             # parse qbert response
             json_response = json.loads(pf9_response.text)
             for item in json_response:
