@@ -129,28 +129,15 @@ def activate(obj, config):
 
 
 @config.command('validate')
-@click.pass_obj
-def config_validate(obj):
+@click.pass_context
+def config_validate(ctx, **kwargs):
     """Validate Active Platform9 Express config."""
     # Validates pf9-express config file and obtains Auth Token
-    config_file = os.path.join(obj['pf9_exp_conf_dir'], 'express.conf')
-    if os.path.exists(config_file):
-        try:
-            with open(config_file, 'r') as data:
-                config_file_lines = data.readlines()
-        except:
-            click.echo('Failed reading %s: '% config_file)
-        config = Utils().config_to_dict(config_file_lines)
-        if config is not None:
-            token = GetToken().get_token_v3(
-                        config["du_url"], 
-                        config["os_username"], 
-                        config["os_password"], 
-                        config["os_tenant"] )
-            if token is not None:
-                click.echo('Config Validated!')
-                click.echo('Token: %s' % token)
-    else:
-        click.echo('No active config. Please define or activate a config.')
-
-
+    #Load Active Config into ctx
+    GetConfig(ctx).GetActiveConfig()
+    #Get Token
+    ctx.params['project_id'] = GetToken().get_project_id(
+                ctx.params["du_url"],
+                ctx.params["du_username"],
+                ctx.params["du_password"],
+                ctx.params["du_tenant"] )

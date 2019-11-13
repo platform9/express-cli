@@ -7,10 +7,11 @@ import click
 
 class CreateCluster(object):
     def __init__(self, ctx):
+        self.ctx = ctx
         self.project_id = ctx.params['project_id']
         self.token = ctx.params['token']
         self.du_url = ctx.params['du_url']
-        self.ctx = ctx
+        self.cluster_name = ctx.params['cluster_name']
         self.headers = { 'content-type': 'application/json', 'X-Auth-Token': self.token }
         control_plane_pause = 30
 
@@ -47,7 +48,7 @@ class CreateCluster(object):
 
 
     def create_cluster(self):
-        self.write_host("Creating Cluster : {}".format(self.ctx.params['cluster_name']))
+        self.write_host("Creating Cluster : {}".format(self.cluster_name))
         nodepool_id = self.get_nodepool_id()
         if nodepool_id == None:
             self.fail_bootstrap("failed to get nodepool_id for cloud provider")
@@ -104,7 +105,7 @@ class CreateCluster(object):
             return False, None
 
         for item in json_response:
-            if item['name'] == self.ctx.params['cluster_name']:
+            if item['name'] == self.cluster_name:
                 return(True, item['uuid'])
 
         # final return

@@ -6,6 +6,7 @@ from string import Template
 import subprocess
 import tempfile
 from ..modules.ostoken import GetToken
+from ..modules.util import GetConfig 
 from ..modules.util import Utils
 from .cluster_create import CreateCluster
 
@@ -93,35 +94,20 @@ def cluster():
 @click.pass_context
 def create(ctx, **kwargs):
     """Create a Kubernetes cluster."""
-    # MOVE TO MODULE!!!
-    # Get Variables from Config
-    config_file = os.path.join(ctx.obj['pf9_exp_conf_dir'], 'express.conf')
-    if os.path.exists(config_file):
-        try:
-            with open(config_file, 'r') as data:
-                config_file_lines = data.readlines()
-        except:
-            click.echo('Failed reading %s: '% config_file)
-        config = Utils().config_to_dict(config_file_lines)
-        if config is not None:
-            ctx.params['du_url'] = config["du_url"]
-            ctx.params['du_username'] = config["os_username"]
-            ctx.params['du_password'] = config["os_password"]
-            ctx.params['du_tenant'] = config["os_tenant"]
-    else:
-        click.echo('No active config. Please define or activate a config.')
-
-    # Get Token and Tenant ID (app pulling tenant_ID "project_id" into get_token)
+    #Load Active Config into ctx 
+    GetConfig(ctx).GetActiveConfig()
+    #Get Token
     ctx.params['project_id'] = GetToken().get_project_id(
-                config["du_url"],
-                config["os_username"],
-                config["os_password"],
-                config["os_tenant"] )
+                ctx.params["du_url"],
+                ctx.params["du_username"],
+                ctx.params["du_password"],
+                ctx.params["du_tenant"] )
+    # Tenant ID
     ctx.params['token'] = GetToken().get_token_v3(
-                config["du_url"],
-                config["os_username"],
-                config["os_password"],
-                config["os_tenant"] )
+                ctx.params["du_url"],
+                ctx.params["du_username"],
+                ctx.params["du_password"],
+                ctx.params["du_tenant"] )
        
     # create cluster
     click.echo("[Creating Cluster: {}]".format(ctx.params['cluster_name']))
