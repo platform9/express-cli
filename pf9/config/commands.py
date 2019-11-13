@@ -4,6 +4,7 @@ import shutil
 from prettytable import PrettyTable
 from ..modules.ostoken import GetToken
 from ..modules.util import Utils 
+from ..modules.util import GetConfig 
 
 @click.group()
 def config():
@@ -136,8 +137,13 @@ def config_validate(ctx, **kwargs):
     #Load Active Config into ctx
     GetConfig(ctx).GetActiveConfig()
     #Get Token
-    ctx.params['project_id'] = GetToken().get_project_id(
+    token = GetToken().get_token_v3(
                 ctx.params["du_url"],
                 ctx.params["du_username"],
                 ctx.params["du_password"],
                 ctx.params["du_tenant"] )
+    if token is not None:
+        click.echo('Config Validated!')
+        click.echo('Token: %s' % token)
+    else:
+        click.echo('Config Validation Failed!')
