@@ -4,11 +4,13 @@ from prettytable import PrettyTable
 import shlex
 from string import Template
 import subprocess
+import sys
 import tempfile
 from ..modules.ostoken import GetToken
 from ..modules.util import GetConfig 
 from ..modules.util import Utils
 from .cluster_create import CreateCluster
+from .cluster_attach import AttachCluster
 
 def run_command(command, run_env=os.environ):
     try:
@@ -75,40 +77,21 @@ def build_express_inventory_file(ctx, user, password, ssh_key, ips,
 
     return inv_file_path
 
-@click.group()
-def cluster():
-    """Platform9 Managed Kuberenetes Cluster"""
-
-@cluster.command('create')
-@click.option('--cluster_name', help='cluster name', prompt='Cluster Name')
-@click.option('--masterVip', help='IP address for VIP for master nodes', prompt='Master VIP')
-@click.option('--masterVipIf', help='Interface name for master/worker node', prompt='Master VIP Interface name')
-@click.option('--metallbCidr', help='IP range for MetalLB (<startIP>-<endIp>)', prompt='MetalLB IP Range')
-@click.option('--containersCidr', type=str, required=False, default='10.20.0.0/16', help="CIDR for container overlay")
-@click.option('--servicesCidr', type=str, required=False, default='10.21.0.0/16', help="CIDR for services overlay")
-@click.option('--externalDnsName', type=str, required=False, default='', help="External DNS name for master VIP")
-@click.option('--privileged', type=bool, required=False, default=True, help="Enable privileged mode for Kubernetes API")
-@click.option('--appCatalogEnabled', type=bool, required=False, default=True, help="Enable Helm application catalog")
-@click.option('--allowWorkloadsOnMaster', type=bool, required=False, default=False, help="Taint master nodes (to enable workloads)")
-@click.option("--networkPlugin", type=str, required=False, default='flannel', help="Specify non-default network plugin (default = flannel)")
-@click.pass_context
-def create(ctx, **kwargs):
-    """Create a Kubernetes cluster."""
-    #Load Active Config into ctx 
+def get_token_project(ctx):
     GetConfig(ctx).GetActiveConfig()
-    #Get Token
-    ctx.params['project_id'] = GetToken().get_project_id(
+
+    # Get Token and Tenant ID (app pulling tenant_ID "project_id" into get_token)
+    auth_obj = GetToken()
+    token, project_id = auth_obj.get_token_project(
                 ctx.params["du_url"],
-                ctx.params["du_username"],
-                ctx.params["du_password"],
-                ctx.params["du_tenant"] )
-    # Tenant ID
-    ctx.params['token'] = GetToken().get_token_v3(
-                ctx.params["du_url"],
-                ctx.params["du_username"],
-                ctx.params["du_password"],
-                ctx.params["du_tenant"] )
-       
+                ctx.params["os_username"],
+                ctx.params["os_password"],
+                ctx.params["os_tenant"] )
+
+    return token, project_id
+
+def create_cluster(ctx):
+    
     # create cluster
     click.echo("[Creating Cluster: {}]".format(ctx.params['cluster_name']))
     cluster_status, cluster_uuid = CreateCluster(ctx).cluster_exists()
@@ -118,108 +101,172 @@ def create(ctx, **kwargs):
     else:
         CreateCluster(ctx).create_cluster()
         cluster_uuid = CreateCluster(ctx).wait_for_cluster()
-        click.echo("--> UUID = {}".format(cluster_uuid))
+
+    return cluster_uuid
 
 
+def attach_cluster(ctx):
+    # Attach to cluster
+    cluster_attacher = AttachCluster(ctx)
+    cluster_name = ctx.params['cluster_name']
 
-@cluster.command('list', hidden=True)
-def define(cluster_list):
-  click.echo('WIP -- cluster.cluster_list')
+    click.echo("[Attaching to cluster {}]".format(cluster_name))
+    status, cluster_uuid = cluster_attacher.cluster_exists(cluster_name)
 
+    if status == False:
+        click.echo("Cluster {} doesn't exist. Provide name of an existing cluster".format(
+                    ctx.params['cluster_name']))
+        # TODO: How should the error be handled?
+        sys.exit(1)
 
-@cluster.command('define', hidden=True)
-@click.argument('cluster')
-@click.option('--user', '-u', required=True, help='Username for cluster nodes.')
-@click.option('--password', '-p', help='Password for cluster nodes.')
-@click.option('--ssh-key', '-s', help='SSH key for cluster nodes.')
-@click.option('--api-fqdn', '-a', required=True, help='FQDN for the API server e.g. k8s.acme.com.')
-@click.option('--container-cidr', '-c', required=True, default='10.1.0.0/16', help='CIDR for k8s containers default is 10.1.0.0/16.')
-@click.option('--service-cidr', '-c', required=True, default='10.2.0.0/16', help='CIDR for k8s services default is 10.2.0.0/16.')
-@click.option('--priviledged', is_flag=True, help='Allow cluster to run priviledged containers')
-def define(cluster):
-    """Define a Kubernetes cluster."""
-    # create a pf9-express kuberentes cluster inventory file
-    click.echo('WIP')
+    master_ips = ctx.params['master_ip']
+    master_nodes = cluster_attacher.get_uuids(master_ips)
+    click.echo("[Discovering UUIDs for Cluster Nodes]")
+    click.echo("--> Master Nodes")
+    for node in master_nodes:
+        click.echo("{}".format(node))
 
-    home = expanduser("~")
-    path = home + '/pf9/pf9-express/'
-    dir_path = path + 'clusters/'
+    # get uuids for worker nodes
+    worker_ips = ctx.params['worker_ip']
+    worker_nodes = cluster_attacher.get_uuids(worker_ips)
+    click.echo("--> Worker Nodes")
+    for node in worker_nodes:
+        click.echo("{}".format(node))
 
-    if os.path.exists(path + 'config/express.conf'):
-        with open(path + 'config/express.conf') as data:
-            for line in data:
-                line = line.strip()
-                if 'config_name|' in line:
-                    name = line.replace('config_name|','')
-                if 'du_url' in line:
-                    du_url = line.replace('du_url|https://','')
-                if 'os_region' in line:
-                    os_region = line.replace('os_region|','')
-            data.close()
+    # wait for cluster to by ready
+    click.echo("\n[Attaching to Cluster: {}]".format(cluster_name))
+    #TODO: Why is this even required??
+    cluster_uuid = cluster_attacher.wait_for_cluster(cluster_name)
 
-    # get token
-    # get nodepool uuid
+    # attach master nodes
+    cluster_attacher.attach_to_cluster(cluster_uuid, 'master', master_nodes)
+    cluster_attacher.wait_for_n_active_masters(cluster_name, len(master_nodes))
 
-    du_url = 'a'
-    tenantid = 'b'
-    url = 'https://pf9-cs-k8s-us/qbert/v3/edeb541c711248088752923d4c68ddff/cloudProviders'
-    r = requests.get()
-    response = r.json()
-    for cp in response:
-        if cp['type'] == 'local':
-            nodepool = cp['nodePoolUuid']
-    
-    if not os.path.exists(dir_path):
-        try:
-            os.mkdir(path, access_rights)
-        except OSError:
-            print ("Creation of the directory %s failed" % path)
-        else:
-            print ("Successfully created the directory %s " % path)
-
-    if not os.path.exists(dir_path + cluster ):
-        click.echo("WIP - DO STUFF")
-        # user
-        # password or ssh key
-        # pod cidr
-        # services cidr
-        # privledged
-        # api fqdn
-    else:
-        click.echo('A cluster by the name of %s already exists' % cluster)
+    # attach worker nodes
+    cluster_attacher.attach_to_cluster(cluster_uuid, 'worker', worker_nodes)
 
 
-# @cluster.command('add-node')
-# @click.argument('cluster')
-# @click.argument('node')
-# def add_node(cluster, node):
-#     """Add a node to a Kubernetes cluster after cluster creation."""
-#     # add node to cluster inventory file and run pf9-express for node
-#     click.echo('WIP')
-
-
-@cluster.command('destroy', hidden=True)
-@click.argument('cluster')
-def destroy(cluster):
-    """Delete a Kuberenetes cluster."""
-    # deauthorize defined nodes in a kuberenetes cluster and delete cluster in qbert
-    click.echo('WIP')
-
-@cluster.command('prep-node')
-@click.option('--user', '-u', help='Username for node.')
-@click.option('--password', '-p', help='Password for node if different than cluster default.')
-@click.option('--ssh-key', '-s', help='SSH key for node if different than cluster default.')
-@click.option('--ips', '-i', multiple=True, help='IPs of the host to be prepped.', default='localhost')
-@click.pass_context
-def prepnode(ctx, user, password, ssh_key, ips):
+def prep_node(ctx, user, password, ssh_key, ips, node_prep_only):
     only_local_node = False
     if len(ips) == 1 and ips[0] == 'localhost':
         only_local_node = True
         click.echo('Prepping the local node to be added to Platform9 Managed Kubernetes')
 
     inv_file = build_express_inventory_file(ctx, user, password, ssh_key, ips,
-                                            only_local_node, node_prep_only=True)
+                                            only_local_node, node_prep_only)
     rcode, output = run_express(ctx, inv_file)
 
+    return rcode, output
+
+@click.group()
+def cluster():
+    """Platform9 Managed Kuberenetes Cluster"""
+
+@cluster.command('bootstrap')
+@click.argument('cluster_name')
+@click.option('--masterVip', help='IP address for VIP for master nodes', default='')
+@click.option('--masterVipIf', help='Interface name for master/worker node', default='')
+@click.option('--metallbCidr', help='IP range for MetalLB (<startIP>-<endIp>)', default='')
+@click.option('--containersCidr', type=str, required=False, default='10.20.0.0/16', help="CIDR for container overlay")
+@click.option('--servicesCidr', type=str, required=False, default='10.21.0.0/16', help="CIDR for services overlay")
+@click.option('--externalDnsName', type=str, required=False, default='', help="External DNS name for master VIP")
+@click.option('--privileged', type=bool, required=False, default=True, help="Enable privileged mode for Kubernetes API")
+@click.option('--appCatalogEnabled', type=bool, required=False, default=False, help="Enable Helm application catalog")
+@click.option('--allowWorkloadsOnMaster', type=bool, required=False, default=False, help="Taint master nodes (to enable workloads)")
+@click.option("--networkPlugin", type=str, required=False, default='flannel', help="Specify non-default network plugin (default = flannel)")
+@click.option('--user', '-u', help='Username for node.')
+@click.option('--password', '-p', help='Password for node if different than cluster default.')
+@click.option('--ssh-key', '-s', help='SSH key for node if different than cluster default.')
+@click.option('--master-ip', '-m', multiple=True, help='IPs of the master nodes.', prompt="IP of the master node", default='localhost') #Confirm this behavior
+@click.option('--worker-ip', '-w', multiple=True, help='IPs of the worker nodes.', default='')
+@click.pass_context
+def bootstrap(ctx, **kwargs):
+    """Create a Kubernetes cluster."""
+
+    master_ips = ctx.params['master_ip']
+    ctx.params['master_ip'] = ''.join(master_ips).split(' ') if all(len(x)==1 for x in master_ips) else master_ips
+    
+    worker_ips = ctx.params['worker_ip']
+    ctx.params['worker_ip'] = ''.join(worker_ips).split(' ') if all(len(x)==1 for x in worker_ips) else worker_ips
+
+    # Do input validation
+    ctx.params['token'], ctx.params['project_id'] = get_token_project(ctx)
+
+    # TODO: Can these be undefined?
+    all_ips = ctx.params['master_ip'] + ctx.params['worker_ip']
+
+    if len(all_ips) > 0:
+        # Nodes are provided. So prep them.
+        adj_ips = ()
+        for ip in all_ips:
+            if ip == "127.0.0.1" or ip == "localhost" \
+                or ip in Utils().get_local_node_addresses():
+
+                adj_ips = adj_ips + ("localhost",)
+            else:
+                adj_ips = adj_ips + (ip,)
+            rcode, output = prep_node(ctx, ctx.params['user'], ctx.params['password'],
+                                    ctx.params['ssh_key'], adj_ips,
+                                    node_prep_only=True)
+
+    cluster_uuid = create_cluster(ctx)
+    click.echo("--> Cluster UUID = {}".format(cluster_uuid))
+
+    # TODO: Probably users should never specify localhost, 127.0.0.1.
+    if len(all_ips) > 0:
+        # Attach nodes
+        attach_cluster(ctx)
+
+
+@cluster.command('create')
+@click.argument('cluster_name')
+@click.option('--masterVip', help='IP address for VIP for master nodes', default='')
+@click.option('--masterVipIf', help='Interface name for master/worker node', default='')
+@click.option('--metallbCidr', help='IP range for MetalLB (<startIP>-<endIp>)', default='')
+@click.option('--containersCidr', type=str, required=False, default='10.20.0.0/16', help="CIDR for container overlay")
+@click.option('--servicesCidr', type=str, required=False, default='10.21.0.0/16', help="CIDR for services overlay")
+@click.option('--externalDnsName', type=str, required=False, default='', help="External DNS name for master VIP")
+@click.option('--privileged', type=bool, required=False, default=True, help="Enable privileged mode for Kubernetes API")
+@click.option('--appCatalogEnabled', type=bool, required=False, default=False, help="Enable Helm application catalog")
+@click.option('--allowWorkloadsOnMaster', type=bool, required=False, default=False, help="Taint master nodes (to enable workloads)")
+@click.option("--networkPlugin", type=str, required=False, default='flannel', help="Specify non-default network plugin (default = flannel)")
+@click.pass_context
+def create(ctx, **kwargs):
+    ctx.params['token'], ctx.params['project_id'] = get_token_project(ctx)
+    cluster_uuid = create_cluster(ctx)
+    click.echo("--> Cluster UUID = {}".format(cluster_uuid))
+
+
+@cluster.command('attach-node')
+@click.argument('cluster_name')
+@click.option('--master-ip', '-m', multiple=True, help='IP of the node to be added as masters')
+@click.option('--worker-ip', '-w', multiple=True, help='IP of the node to be added as workers')
+@click.pass_context
+def attach_node(ctx, **kwargs):
+    ctx.params['token'], ctx.params['project_id'] = get_token_project(ctx)
+    attach_cluster(ctx)
+
+@cluster.command('prep-node')
+@click.option('--user', '-u', help='Username for node.')
+@click.option('--password', '-p', help='Password for node if different than cluster default.')
+@click.option('--ssh-key', '-s', help='SSH key for node if different than cluster default.')
+@click.option('--ips', '-i', multiple=True, help='IPs of the host to be prepped.', prompt="IP of the node to be prepped", default=('localhost',))
+@click.pass_context
+def prepnode(ctx, user, password, ssh_key, ips):
+
+    # Oversmart click does some bs processing if the multiple value option (ips)
+    # has just one value provided. Seriously! - Need this work around.
+    parse_ips = ''.join(ips).split(' ') if all(len(x)==1 for x in ips) else ips
+    adj_ips = ()
+    for ip in parse_ips:
+        if ip == "127.0.0.1" or ip == "localhost" \
+            or ip in Utils().get_local_node_addresses():
+
+            adj_ips = adj_ips + ("localhost",)
+        else:
+            adj_ips = adj_ips + (ip,)
+
+    rcode, output = prep_node(ctx, user, password, ssh, key,
+                              adj_ips, node_prep_only=True)
+
     #TODO: Report success/failure
-    click.echo('WIP')

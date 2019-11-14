@@ -60,7 +60,7 @@ setup(
     ],
     keywords = 'cli',
     packages = find_packages(exclude=['docs', 'tests*']),
-    install_requires = ['click', 'prettytable', 'requests'],
+    install_requires = ['click', 'prettytable', 'requests', 'netifaces'],
     extras_require = {
         'test': ['coverage', 'pytest', 'pytest-cov', 'mock'],
     },
