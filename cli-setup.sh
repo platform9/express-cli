@@ -95,19 +95,19 @@ ensure_py_pip_setup() {
 
     #Install pip if not present
     if [ ${use_py3} -eq 1 ]; then
+        #YUCK.. Need this hack for Ubuntu16.04
+        if [ "${platform}" == "ubuntu" ]; then
+            sudo apt-get update> /dev/null 2>&1 # python3-venv install fails on fresh ubuntu wihtout an update
+            sudo apt-get -y install python3-venv
+        fi
+        if [ $? -ne 0 ]; then
+            echo -e "\nERROR: failed to install python3-venv - here's the last 10 lines of the log:\n"
+            tail -10 ${log}; exit 1
+        fi
         pip3_exec=$(which pip3)
         if [ $? -ne 0 ]; then
-            #YUCK.. Need this hack for Ubuntu16.04
-            if [ "${platform}" == "ubuntu" ]; then
-                sudo apt-get update> /dev/null 2>&1 # python3-venv install fails on fresh ubuntu wihtout an update
-                sudo apt-get -y install python3-venv
-            fi
-            if [ $? -ne 0 ]; then
-                echo -e "\nERROR: failed to install python3-venv - here's the last 10 lines of the log:\n"
-                tail -10 ${log}; exit 1
-            fi
             curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
-            sudo {py3_exec} /tmp/get-pip.py
+            sudo ${py3_exec} /tmp/get-pip.py
         fi
     else
         pip2_exec=$(which pip)
