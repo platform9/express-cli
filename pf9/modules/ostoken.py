@@ -4,6 +4,8 @@
 # Tested with python 2.7 and 3.7.0 on OSX and Ubuntu 17.10
 # maintainer: tom.christopoulos@platform9.com
 
+from exceptions import UserAuthFailure
+import click
 import json
 import requests
 import sys
@@ -38,9 +40,10 @@ class GetToken:
                           json=body)
 
         if r.status_code not in (200, 201):
-            print("{0}: {1}".format(r.status_code, r.text))
-            sys.exit(1)
-     
+            click.echo("{0}: {1}".format(r.status_code, r.text))
+            msg = "Failed to authenticate with {}".format(host)
+            raise UserAuthFailure(msg)
+
         response = {
                 "headers": r.headers,
                 "json": r.json()

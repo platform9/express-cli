@@ -30,7 +30,7 @@ class CreateCluster(object):
     def get_nodepool_id(self):
         try:
             api_endpoint = "qbert/v3/{}/cloudProviders".format(self.project_id)
-            pf9_response = requests.get("{}/{}".format(self.du_url,api_endpoint), verify=False, headers=self.headers)
+            pf9_response = requests.get("{}/{}".format(self.du_url,api_endpoint), headers=self.headers)
             if pf9_response.status_code != 200:
                 return None
 
@@ -77,7 +77,7 @@ class CreateCluster(object):
         # create cluster (post to qbert)
         try:
             api_endpoint = "qbert/v3/{}/clusters".format(self.project_id)
-            pf9_response = requests.post("{}/{}".format(self.du_url,api_endpoint), verify=False, headers=self.headers, data=json.dumps(cluster_create_payload))
+            pf9_response = requests.post("{}/{}".format(self.du_url,api_endpoint), headers=self.headers, data=json.dumps(cluster_create_payload))
         except:
             self.fail_bootstrap("failed to create cluster")
 
@@ -92,7 +92,7 @@ class CreateCluster(object):
     def cluster_exists(self):
         try:
             api_endpoint = "qbert/v3/{}/clusters".format(self.project_id)
-            pf9_response = requests.get("{}/{}".format(self.du_url,api_endpoint), verify=False, headers=self.headers)
+            pf9_response = requests.get("{}/{}".format(self.du_url,api_endpoint), headers=self.headers)
             if pf9_response.status_code != 200:
                 return False, None
         except:
