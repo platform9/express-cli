@@ -109,6 +109,9 @@ ensure_py_pip_setup() {
             curl https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
             sudo ${py3_exec} /tmp/get-pip.py
         fi
+        pip3_exec=$(which pip3)
+        sudo ${pip3_exec} install virtualenv
+        venv_exec=$(which virtualenv)
     else
         pip2_exec=$(which pip)
         if [ $? -ne 0 ]; then
@@ -134,7 +137,8 @@ setup_venv() {
     sudo mkdir -p ${cli_setup_dir}
     if [ ${use_py3} -eq 1 ]; then
         # TODO: Error handling
-        sudo ${py3_exec} -m venv ${cli_setup_dir}
+        sudo ${venv_exec} -p python3 --system-site-packages ${cli_setup_dir}
+        #sudo ${py3_exec} -m venv ${cli_setup_dir} --system-site-packages
     else
         # TODO: Error handling
         sudo ${py2_exec} -m virtualenv ${cli_setup_dir}
