@@ -25,9 +25,9 @@ def run_express(ctx, inv_file):
     # Build the pf9-express command to run
     exp_ansible_runner = os.path.join(ctx.obj['pf9_exp_dir'], 'express', 'pf9-express')
     exp_config_file = os.path.join(ctx.obj['pf9_exp_dir'], 'config', 'express.conf')
-    # TODO: Make this run only PMK tasks
-    cmd = 'sudo {0} -a -b -v {1} -c {2} pmk'.format(exp_ansible_runner, inv_file,
-                                                    exp_config_file)
+    # Invoke PMK only related playbook.
+    cmd = 'sudo {0} -a -b --pmk -v {1} -c {2} pmk'.format(exp_ansible_runner,
+                                                   inv_file, exp_config_file)
     return run_command(cmd)
 
 # NOTE: a utils file may be a better location for these helper methods
@@ -50,18 +50,18 @@ def build_express_inventory_file(ctx, user, password, ssh_key, ips,
         inv_file_path = os.path.join(tmp_dir, 'exp-inventory')
 
         if only_local_node:
-            node_details = 'localhost ansible_connection=local ansible_host=localhost\n'
+            node_details = 'localhost ansible_python_interpreter=/opt/pf9/cli/bin/python ansible_connection=local ansible_host=localhost\n'
         else:
             # Build the great inventory file
             for ip in ips:
                 if ip == 'localhost':
-                    node_info = 'localhost ansible_connection=local ansible_host=localhost\n'
+                    node_info = 'localhost ansible_python_interpreter=/opt/pf9/cli/bin/python ansible_connection=local ansible_host=localhost\n'
                 else:
                     if password:
-                        node_info = '{0} ansible_user={1} ansible_ssh_pass={2}\n'.format(
+                        node_info = "{0} ansible_python_interpreter=/opt/pf9/cli/bin/python ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_user={1} ansible_ssh_pass={2}\n".format(
                                      ip, user, password)
                     else:
-                        node_info = '{0} ansible_user={1} ansible_ssh_private_key_file={2}\n'.format(
+                        node_info = "{0} ansible_python_interpreter=/opt/pf9/cli/bin/python ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_user={1} ansible_ssh_private_key_file={2}\n".format(
                                      ip, user, ssh_key)
                 node_details = "".join((node_details, node_info))
 
@@ -84,9 +84,9 @@ def get_token_project(ctx):
     auth_obj = GetToken()
     token, project_id = auth_obj.get_token_project(
                 ctx.params["du_url"],
-                ctx.params["os_username"],
-                ctx.params["os_password"],
-                ctx.params["os_tenant"] )
+                ctx.params["du_username"],
+                ctx.params["du_password"],
+                ctx.params["du_tenant"] )
 
     return token, project_id
 
@@ -184,16 +184,18 @@ def bootstrap(ctx, **kwargs):
     """Create a Kubernetes cluster."""
 
     master_ips = ctx.params['master_ip']
-    ctx.params['master_ip'] = ''.join(master_ips).split(' ') if all(len(x)==1 for x in master_ips) else master_ips
-    
+    ctx.params['master_ip'] = ''.join(master_ips).split(' ') if all(len(x)==1 for x in master_ips) else list(master_ips)
+
+    all_ips = ctx.params['master_ip']
+
     worker_ips = ctx.params['worker_ip']
-    ctx.params['worker_ip'] = ''.join(worker_ips).split(' ') if all(len(x)==1 for x in worker_ips) else worker_ips
+    if worker_ips:
+        # Worker ips may be undefined
+        ctx.params['worker_ip'] = ''.join(worker_ips).split(' ') if all(len(x)==1 for x in worker_ips) else list(worker_ips)
+        all_ips = all_ips + ctx.params['worker_ip']
 
     # Do input validation
     ctx.params['token'], ctx.params['project_id'] = get_token_project(ctx)
-
-    # TODO: Can these be undefined?
-    all_ips = ctx.params['master_ip'] + ctx.params['worker_ip']
 
     if len(all_ips) > 0:
         # Nodes are provided. So prep them.
