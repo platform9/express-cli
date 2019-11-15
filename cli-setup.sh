@@ -34,7 +34,7 @@ install_prereqs() {
             fi
         done
     else
-        echo -e "\nERROR: Unsupported platform ${platform}. Please use an ubuntu platform"; exit 1
+        echo -e "\nERROR: Unsupported platform ${platform}. Please use an Ubuntu 16.04 platform"; exit 1
     fi
 }
 
