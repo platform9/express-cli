@@ -10,3 +10,4 @@ prune build
 prune dist
 recursive-exclude *.egg-info *
 recursive-include tests *
+include ./pf9/templates/*
