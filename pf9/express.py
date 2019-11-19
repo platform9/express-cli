@@ -88,7 +88,7 @@ def upgrade(obj):
     # upgrade to latest version of pf9-express 
  
     ver = Pf9ExpVersion()
-    #click.echo(ver.get_release_json())
+    click.echo(ver.get_release_json())
 
     r = requests.get('https://api.github.com/repos/platform9/express/releases/latest')
     response = r.json()
