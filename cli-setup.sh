@@ -150,7 +150,7 @@ setup_express() {
     if [ ${flag_testsetup} -eq 1 ]; then
         # Dependencies are not well handled with the test pypi. Install explicityly first.
         # TODO: Explore if there is a better way to handle dependencies like below
-        sudo ${cli_setup_dir}/bin/pip install click requests prettytable netifaces colorama click-spinner
+        sudo ${cli_setup_dir}/bin/pip install click requests prettytable netifaces colorama
         sudo ${cli_setup_dir}/bin/pip install --index-url https://test.pypi.org/simple/ express-cli
     else
         sudo ${cli_setup_dir}/bin/pip install express-cli
