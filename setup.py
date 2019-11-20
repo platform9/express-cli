@@ -2,17 +2,11 @@
 
 
 from codecs import open
-from os.path import abspath, dirname, join
 from subprocess import call
 
 from setuptools import Command, find_packages, setup
 
 from pf9 import __version__
-
-
-this_dir = abspath(dirname(__file__))
-with open(join(this_dir, 'README.md'), encoding='utf-8') as file:
-    long_description = file.read()
 
 
 class RunTests(Command):
@@ -58,6 +52,11 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
     ],
+    package_data = {
+        'pf9':['templates/*',],
+    },
+    include_package_data=True,
+    zip_safe=False,
     keywords = 'cli',
     packages = find_packages(exclude=['docs', 'tests*']),
     install_requires = ['click', 'prettytable', 'requests', 'netifaces', 'colorama'],
