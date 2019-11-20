@@ -117,8 +117,8 @@ class AttachCluster(object):
         for host in json_response:
             if not 'extensions' in host:
                 continue
-            for key, value in host['extensions']['interfaces']['data'].iteritems():
-                for iface_name, iface_ip in host['extensions']['interfaces']['data']['iface_ip'].iteritems():
+            for key, value in host['extensions']['interfaces']['data'].items():
+                for iface_name, iface_ip in host['extensions']['interfaces']['data']['iface_ip'].items():
                     if iface_ip == host_ip:
                         return(host['id'])
 

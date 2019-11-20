@@ -150,7 +150,7 @@ setup_express() {
     if [ ${flag_testsetup} -eq 1 ]; then
         # Dependencies are not well handled with the test pypi. Install explicityly first.
         # TODO: Explore if there is a better way to handle dependencies like below
-        sudo ${cli_setup_dir}/bin/pip install click requests prettytable
+        sudo ${cli_setup_dir}/bin/pip install click requests prettytable netifaces colorama
         sudo ${cli_setup_dir}/bin/pip install --index-url https://test.pypi.org/simple/ express-cli
     else
         sudo ${cli_setup_dir}/bin/pip install express-cli
@@ -173,6 +173,7 @@ setup_express() {
     read -p "Platform9 user tenant: " PROJECT
     ${cli_setup_dir}/bin/express config create --config_name pf9-express ${configname} --du ${DUFQDN} --os_username ${USER} --os_password ${PASS} --os_region ${REGION} --os_tenant ${PROJECT}
     sudo ln -s ${cli_setup_dir}/bin/express /usr/bin/express
+    sudo ln -s ${cli_setup_dir}/bin/express /usr/bin/pf9ctl
 }
 
 while [ $# -gt 0 ]; do
