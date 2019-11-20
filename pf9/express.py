@@ -88,12 +88,12 @@ def upgrade(obj):
     # upgrade to latest version of pf9-express 
  
     ver = Pf9ExpVersion()
-    click.echo(ver.get_latest_json())
+    click.echo(ver.get_release_json())
 
     r = requests.get('https://api.github.com/repos/platform9/express/releases/latest')
     response = r.json()
     url = response['tarball_url']
-    version = response['version']
+    version = response['tag_name']
     access_rights = 0o755
     pf9_dir = obj['pf9_dir']
     pf9_exp_dir = obj['pf9_exp_dir']
@@ -105,7 +105,7 @@ def upgrade(obj):
         v.close()
 
     if line != version:
-        click.echo("we are here, we are really here")
+        click.echo("A newer version of Platform9 Express is avialable")
         if not os.path.exists(pf9_exp_dir):
             try:
                 os.mkdir(pf9_exp_dir, access_rights)
