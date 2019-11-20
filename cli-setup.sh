@@ -172,8 +172,8 @@ setup_express() {
     read -sp "Platform9 user password: " PASS
     read -p "Platform9 user tenant: " PROJECT
     ${cli_setup_dir}/bin/express config create --config_name pf9-express ${configname} --du ${DUFQDN} --os_username ${USER} --os_password ${PASS} --os_region ${REGION} --os_tenant ${PROJECT}
-    sudo ln -s ${cli_setup_dir}/bin/express /usr/bin/express
-    sudo ln -s ${cli_setup_dir}/bin/express /usr/bin/pf9ctl
+    sudo ln -sf ${cli_setup_dir}/bin/express /usr/bin/express
+    sudo ln -sf ${cli_setup_dir}/bin/express /usr/bin/pf9ctl
 }
 
 while [ $# -gt 0 ]; do
