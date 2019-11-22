@@ -149,7 +149,6 @@ prompt_account_inputs() {
     read -p "Platform9 account management URL [Example: https://example.platform9.io]: " MGMTURL
     if [[ ${MGMTURL} != https://* ]]; then
         MGMTURL=https://${MGMTURL}
-        sleep 20
         echo "Platform9 account management URL should start with https://. Trying with ${MGMTURL}"
     fi
     read -p "Platform9 username: " USER
