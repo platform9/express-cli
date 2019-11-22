@@ -145,15 +145,32 @@ setup_venv() {
     fi
 }
 
+prompt_account_inputs() {
+    read -p "Platform9 account management URL [Example: https://example.platform9.io]: " MGMTURL
+    if [[ ${MGMTURL} != https://* ]]; then
+        MGMTURL=https://${MGMTURL}
+        echo "Platform9 account management URL should start with https://. Trying with ${MGMTURL}"
+    fi
+    read -p "Platform9 username: " USER
+    read -sp "Platform9 user password: " PASS
+    # Assume defaults for the region/project for now
+    PROJECT=service
+    REGION=RegionOne
+    echo "The setup is going to use the 'service' project under the 'RegionOne' region"
+    #read -p "Platform9 user tenant: " PROJECT
+    #read -p "Platform9 region: " REGION
+
+}
+
 setup_express() {
     echo "################################### Install express cli ########################################"
     if [ ${flag_testsetup} -eq 1 ]; then
         # Dependencies are not well handled with the test pypi. Install explicityly first.
         # TODO: Explore if there is a better way to handle dependencies like below
         sudo ${cli_setup_dir}/bin/pip install click requests prettytable netifaces colorama
-        sudo ${cli_setup_dir}/bin/pip install --index-url https://test.pypi.org/simple/ express-cli
+        sudo ${cli_setup_dir}/bin/pip install --upgrade --index-url https://test.pypi.org/simple/ express-cli
     else
-        sudo ${cli_setup_dir}/bin/pip install express-cli
+        sudo ${cli_setup_dir}/bin/pip install --upgrade express-cli
     fi
 
     if [ $? != '0' ]
@@ -166,12 +183,24 @@ setup_express() {
     ${cli_setup_dir}/bin/express init
 
     echo "########################### Configuring the CLI to use your account #############################"
-    read -p "Platform9 account FQDN: " DUFQDN
-    read -p "Platform9 region: " REGION
-    read -p "Platform9 username: " USER
-    read -sp "Platform9 user password: " PASS
-    read -p "Platform9 user tenant: " PROJECT
-    ${cli_setup_dir}/bin/express config create --config_name pf9-express ${configname} --du ${DUFQDN} --os_username ${USER} --os_password ${PASS} --os_region ${REGION} --os_tenant ${PROJECT}
+    attempt=1
+    while [ $attempt -le 3 ]; do
+        prompt_account_inputs
+        ${cli_setup_dir}/bin/express config create --config_name pf9-express ${configname} --du ${MGMTURL} --os_username ${USER} --os_password ${PASS} --os_region ${REGION} --os_tenant ${PROJECT}
+        ${cli_setup_dir}/bin/express config validate
+        if [ $? -ne 0 ]; then
+            echo "Failed to validate the Platform9 account provided. Let's retry."
+            attempt=$((attempt+1))
+            continue
+        else
+            break
+        fi
+    done
+    if [ $attempt -eq 4 ]; then
+        echo "Failed to validate the Platform9 account provided. Giving up."
+        exit 1
+    fi
+
     sudo ln -sf ${cli_setup_dir}/bin/express /usr/bin/express
     sudo ln -sf ${cli_setup_dir}/bin/express /usr/bin/pf9ctl
 }
