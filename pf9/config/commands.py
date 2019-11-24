@@ -8,7 +8,7 @@ from ..modules.util import GetConfig
 
 @click.group()
 def config():
-    """Configure Platform9 Express."""
+    """Configure CLI for Platform9 management planes."""
 def manage_dns_resolvers(ctx, param, value):
     if value:
         if ctx.params['dns_resolver1'] is None:
@@ -35,7 +35,7 @@ def manage_dns_resolvers(ctx, param, value):
 @click.option('--manage_resolver', type=bool, default=False, callback=manage_dns_resolvers)
 @click.pass_context
 def create(ctx, **kwargs):
-    """Create Platform9 Express config."""
+    """Create Platform9 management plane config."""
     # creates and activates pf9-express config file
 
     pf9_exp_conf_dir = ctx.obj['pf9_exp_conf_dir']
@@ -65,13 +65,13 @@ def create(ctx, **kwargs):
     with open(pf9_exp_conf_dir + 'express.conf', 'w') as file:
         for k,v in ctx.params.items():
             file.write(k + '|' + str(v) + '\n')
-    click.echo('Successfully wrote Platform9 Express configuration')
+    click.echo('Successfully wrote Platform9 management plane configuration')
 
 
 @config.command('list')
 @click.pass_obj
 def list(obj):
-    """List Platform9 Express configs."""
+    """List Platform9 management plane configs."""
     # lists pf9-express config files
     pf9_exp_conf_dir = obj['pf9_exp_conf_dir']
 
@@ -96,14 +96,14 @@ def list(obj):
         click.echo(result)
 
     else:
-        click.echo('No Platform9 Express configs exist')
+        click.echo('No Platform9 management plane configs exist')
 
 
 @config.command('activate')
 @click.argument('config')
 @click.pass_obj
 def activate(obj, config):
-    """Activate Platform9 Express config."""
+    """Activate Platform9 management plane config."""
     # activates pf9-express config file
     click.echo("Activating config %s" % config)
     dir_path = obj['pf9_exp_conf_dir']
@@ -132,7 +132,7 @@ def activate(obj, config):
 @config.command('validate')
 @click.pass_context
 def config_validate(ctx, **kwargs):
-    """Validate Active Platform9 Express config."""
+    """Validate active Platform9 management plane config."""
     # Validates pf9-express config file and obtains Auth Token
     #Load Active Config into ctx
     GetConfig(ctx).GetActiveConfig()
