@@ -109,7 +109,7 @@ class TestConfigCreateFull(TestCase):
                     '--dns_resolver2=2.2.2.2'], 
                 obj=self.obj_test)
         assert (result.exit_code == 0)
-        assert ('Successfully wrote Platform9 Express configuration' in result.output)
+        assert ('Successfully wrote Platform9 management plane configuration' in result.output)
 # !!! Need to compaire elements of both config files
 # !!! They are strings so either readline and evaluate each against other file or split('\n', list).sort()
 #        with open(os.path.join(self.conf_dir, 'express.conf'), 'r') as read_test_conf:
@@ -161,7 +161,7 @@ class TestConfigCreateMinimal(TestCase):
                     '--os_tenant=service'], 
                 obj=self.obj_test)
         assert (result.exit_code == 0)
-        assert ('Successfully wrote Platform9 Express configuration' in result.output)
+        assert ('Successfully wrote Platform9 management plane configuration' in result.output)
 # !!! Need to compaire elements of both config files
 
 
@@ -195,14 +195,14 @@ class TestConfigList(TestCase):
         runner = CliRunner()
         result = runner.invoke(cli_config_list, obj=self.obj_test)
         assert (result.exit_code == 0)
-        assert ('No Platform9 Express configs exist' in result.output)
+        assert ('No Platform9 management plane configs exist' in result.output)
 
     def test_config_list_empty(self):
         os.makedirs(self.conf_dir, 0o755)
         runner = CliRunner()
         result = runner.invoke(cli_config_list, obj=self.obj_test)
         assert result.exit_code == 0
-        assert ('No Platform9 Express configs exist' in result.output or 'Management Plane' in result.output)
+        assert ('No Platform9 management plane configs exist' in result.output or 'Management Plane' in result.output)
 
     def test_config_list_with_config(self):
         os.makedirs(self.conf_dir, 0o755)

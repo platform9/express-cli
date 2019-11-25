@@ -36,11 +36,9 @@ def run_express(ctx, inv_file, ips):
     log_file = os.path.join("/var/log/pf9",
                             datetime.now().strftime('express_%Y_%m_%d-%H_%m_%S.log'))
     # Invoke PMK only related playbook.
-    #cmd = 'sudo {0} -a -b --pmk -v {1} -c {2} -l {3} pmk'.format(exp_ansible_runner,
-    #                                               inv_file, exp_config_file, log_file)
+    cmd = 'sudo {0} -a -b --pmk -v {1} -c {2} -l {3} pmk'.format(exp_ansible_runner,
+                                                inv_file, exp_config_file, log_file)
 
-    cmd = 'sudo {0} -a -b --pmk -v {1} -c {2} pmk'.format(exp_ansible_runner,
-                                                   inv_file, exp_config_file)
     # Current implementation is to have this express invocation dumps logs in 
     # a known location instead of capturing it here. Here we care only about
     # the exit code and fake progress.
@@ -211,7 +209,7 @@ def cluster():
 @click.argument('cluster_name')
 @click.option('--masterVip', help='IP address for VIP for master nodes', default='')
 @click.option('--masterVipIf', help='Interface name on which the VIP should bind to', default='')
-@click.option('--metallbCidr', help='IP range for MetalLB (<startIP>-<endIp>)', default='')
+@click.option('--metallbIpRange', help='IP range for MetalLB (<startIP>-<endIp>)', default='')
 @click.option('--containersCidr', type=str, required=False, default='10.20.0.0/16', help="CIDR for container overlay")
 @click.option('--servicesCidr', type=str, required=False, default='10.21.0.0/16', help="CIDR for services overlay")
 @click.option('--externalDnsName', type=str, required=False, default='', help="External DNS name for master VIP")
@@ -222,8 +220,8 @@ def cluster():
 @click.option('--user', '-u', help='Username for node.')
 @click.option('--password', '-p', help='Password for node if different than cluster default.')
 @click.option('--ssh-key', '-s', help='SSH key for node if different than cluster default.')
-@click.option('--master-ip', '-m', multiple=True, help='IPs of the master nodes.', required=True)
-@click.option('--worker-ip', '-w', multiple=True, help='IPs of the worker nodes.', default='')
+@click.option('--master-ip', '-m', multiple=True, help='IPs of the master nodes. Specify multiple IPs by repeating this option.', required=True)
+@click.option('--worker-ip', '-w', multiple=True, help='IPs of the worker nodes. Specify multiple IPs by repeating this option.', default='')
 @click.pass_context
 def create(ctx, **kwargs):
     """Create a Kubernetes cluster"""
@@ -359,8 +357,8 @@ def bootstrap(ctx, **kwargs):
 
 @cluster.command('attach-node')
 @click.argument('cluster_name')
-@click.option('--master-ip', '-m', multiple=True, help='IP of the node to be added as masters')
-@click.option('--worker-ip', '-w', multiple=True, help='IP of the node to be added as workers')
+@click.option('--master-ip', '-m', multiple=True, help='IP of the node to be added as masters, Specify multiple IPs by repeating this option.')
+@click.option('--worker-ip', '-w', multiple=True, help='IP of the node to be added as workers. Specify multiple IPs by repeating this option.')
 @click.pass_context
 def attach_node(ctx, **kwargs):
     """
@@ -397,7 +395,7 @@ def attach_node(ctx, **kwargs):
 @click.option('--user', '-u', help='SSH username for nodes.')
 @click.option('--password', '-p', help='SSH password for nodes.')
 @click.option('--ssh-key', '-s', help='SSH key for nodes.')
-@click.option('--ips', '-i', multiple=True, help='IPs of the host to be prepped.')
+@click.option('--ips', '-i', multiple=True, help='IPs of the host to be prepped. Specify multiple IPs by repeating this option.')
 @click.pass_context
 def prepnode(ctx, user, password, ssh_key, ips):
     """ 
@@ -407,7 +405,7 @@ def prepnode(ctx, user, password, ssh_key, ips):
         prompt_msg = "No IPs provided. Proceed with preparing the current node to be added to a Kubernetes cluster [y/n]?"
 
         localnode_confirm = click.prompt(prompt_msg, default = 'y')
-        if prompt_msg.lower() == 'n':
+        if localnode_confirm.lower() == 'n':
             sys.exit(1)
         else:
             ips = ("localhost",)
