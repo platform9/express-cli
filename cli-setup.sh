@@ -185,10 +185,18 @@ prompt_account_inputs() {
     read -p "Platform9 username: " USER
     read -sp "Platform9 user password: " PASS
     echo
-    # Assume defaults for the region/project for now
-    PROJECT=service
-    REGION=RegionOne
-    write_out_log "The setup is going to use the 'service' project under the 'RegionOne' region"
+    # Assume defaults for the region/project unless we get it from the env
+    if [ -z "${PF9_PROJECT}" ]; then
+        PROJECT=service
+    else
+        PROJECT=${PF9_PROJECT}
+    fi
+    if [ -z "${PF9_REGION}" ]; then
+        REGION=RegionOne
+    else
+        REGION=${PF9_REGION}
+    fi
+    write_out_log "The setup is going to use the ${PROJECT} project under the ${REGION} region"
 }
 
 setup_express() {
