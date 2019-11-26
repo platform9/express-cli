@@ -36,9 +36,12 @@ def run_express(ctx, inv_file, ips):
     log_file = os.path.join("/var/log/pf9",
                             datetime.now().strftime('express_%Y_%m_%d-%H_%m_%S.log'))
     # Invoke PMK only related playbook.
-    cmd = 'sudo {0} -a -b --pmk -v {1} -c {2} -l {3} pmk'.format(exp_ansible_runner,
-                                                inv_file, exp_config_file, log_file)
-
+    # Should this be defined directly in the inv file template? It could be a global setting
+    # for CLI inventory files.
+    ansible_extra_vars = "\"custom_py_interpreter=/opt/pf9/cli/bin/python\""
+    cmd = 'sudo {0} -a -b --pmk -v {1} -c {2} -l {3} -e {4} pmk'.format(exp_ansible_runner,
+                                                                 inv_file, exp_config_file,
+                                                                 log_file, ansible_extra_vars)
     # Current implementation is to have this express invocation dumps logs in 
     # a known location instead of capturing it here. Here we care only about
     # the exit code and fake progress.
@@ -64,8 +67,7 @@ def run_express(ctx, inv_file, ips):
         bar.update(total_nodes * time_per_host_secs)
 
     if cmd_proc.returncode:
-        msg = "Error while preparing nodes. Code: {}, output log: {}".format(
-                                            cmd_proc.returncode, log_file)
+        msg = "Code: {}, output log: {}".format(cmd_proc.returncode, log_file)
         raise PrepNodeFailed(msg)
 
     return cmd_proc.returncode, log_file
@@ -326,14 +328,10 @@ def bootstrap(ctx, **kwargs):
     try:
         ctx.params['token'], ctx.params['project_id'] = get_token_project(ctx)
 
+        # This will throw when the prep node fails
         rcode, output = prep_node(ctx, None, None,
                                 None, ('localhost',),
                                 node_prep_only=True)
-
-        if rcode:
-            #TODO: Should we put logs somewhere?
-            click.secho("Encountered an error while preparing the local node as a Kubernetes node.",
-                        fg="red")
 
         cluster_uuid = create_cluster(ctx)
         click.echo("Cluster UUID: {}".format(cluster_uuid))
@@ -345,9 +343,8 @@ def bootstrap(ctx, **kwargs):
         # Attach nodes
         attach_cluster(ctx.params['cluster_name'], (local_ip[0],), None, ctx)
     except CLIException as e:
-        #TODO: Should we put logs somewhere?
-        click.secho("Encountered an error while bootstrapping the local node to a Kubernetes cluster.",
-                    fg="red")
+        click.secho("Encountered an error while bootstrapping the local node to a Kubernetes"\
+                    " cluster. {}".format(e.msg), fg="red")
         sys.exit(1)
     else:
         click.secho("Successfully created cluster {} "\
@@ -434,9 +431,8 @@ def prepnode(ctx, user, password, ssh_key, ips):
                                     adj_ips, node_prep_only=True)
 
     except CLIException as e:
-        #TODO: Should we put logs somewhere?
-        click.secho("Encountered an error while preparing the provided nodes as a Kubernetes nodes.",
-                    fg="red")
+        click.secho("Encountered an error while preparing the provided nodes as " \
+                    "Kubernetes nodes. {}".format(e.msg), fg="red")
         sys.exit(1)
     else:
         click.secho("Preparing the provided nodes to be added to Kubernetes cluster was successful",
