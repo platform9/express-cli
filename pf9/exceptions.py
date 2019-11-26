@@ -35,6 +35,10 @@ class ClusterAttachFailed(ClusterCLIException):
     def __init__(self, msg):
         super(ClusterAttachFailed, self).__init__(msg)
 
+class FailedActiveMasters(ClusterCLIException):
+    def __init__(self, msg):
+        super(FailedActiveMasters, self).__init__(msg)
+
 class PrepNodeFailed(ClusterCLIException):
     def __init__(self, msg):
         super(PrepNodeFailed, self).__init__(msg)

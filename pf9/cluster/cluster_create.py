@@ -4,6 +4,7 @@ import time
 import requests
 import json
 import click
+from ..exceptions import ClusterCreateFailed
 
 class CreateCluster(object):
     def __init__(self, ctx):
@@ -48,11 +49,10 @@ class CreateCluster(object):
 
 
     def create_cluster(self):
-        self.write_host("Creating Cluster : {}".format(self.cluster_name))
         nodepool_id = self.get_nodepool_id()
         if nodepool_id == None:
             self.fail_bootstrap("failed to get nodepool_id for cloud provider")
-        self.write_host("nodepool_id = {}".format(nodepool_id))
+        self.write_host("Using nodepool id: {}".format(nodepool_id))
 
         # configure cluster
         cluster_create_payload = {
@@ -73,21 +73,25 @@ class CreateCluster(object):
             "metallbCidr": self.ctx.params['metallbiprange'],
             "networkPlugin": self.ctx.params['networkplugin']
         }
-        self.write_host("--> cluster configuration")
 
         # create cluster (post to qbert)
         try:
             api_endpoint = "qbert/v3/{}/clusters".format(self.project_id)
             pf9_response = requests.post("{}/{}".format(self.du_url,api_endpoint), headers=self.headers, data=json.dumps(cluster_create_payload))
-        except:
-            self.fail_bootstrap("failed to create cluster")
+        except Exception as e:
+            msg = "Failed to create cluster: {}".format(e)
+            self.fail_bootstrap(msg)
+            raise ClusterCreateFailed(msg)
 
         # parse resmgr response
         try:
             json_response = json.loads(pf9_response.text)
         except:
-            self.fail_bootstrap("cluster created, but response did not include the cluster uuid")
-        self.write_host("cluster created successfully, id = {}".format(json_response['uuid']))
+            msg = "Cluster created, but response did not include the cluster uuid"
+            self.fail_bootstrap(msg)
+            raise ClusterCreateFailed(msg)
+
+        return json_response['uuid']
 
 
     def cluster_exists(self):
@@ -122,7 +126,7 @@ class CreateCluster(object):
         flag_cluster_exists = False
         while True:
             cluster_status, cluster_uuid = self.cluster_exists()
-            self.write_host("Waiting for cluster to be created, status = {}".format(cluster_status))
+            self.write_host("Waiting for cluster create to complete, status = {}".format(cluster_status))
             if cluster_status == True:
                 flag_cluster_exists = True
                 break
@@ -136,5 +140,5 @@ class CreateCluster(object):
             self.fail_bootstrap("TIMEOUT: waiting for cluster to be created (qbert)")
 
         # return cluster uuid
-        return(cluster_uuid)
+        return cluster_uuid
 
