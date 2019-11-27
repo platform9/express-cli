@@ -37,7 +37,7 @@ class AttachCluster(object):
                                         headers=self.headers)
             if pf9_response.status_code != 200:
                 return False, None
- 
+
             # parse qbert response
             json_response = json.loads(pf9_response.text)
             for item in json_response:
@@ -62,7 +62,6 @@ class AttachCluster(object):
                 break
             elif int(time.time()) > timeout:
                 break
-
             time.sleep(POLL_INTERVAL)
 
         # enforce TIMEOUT
@@ -77,8 +76,8 @@ class AttachCluster(object):
             pf9_response = requests.get("{}/{}".format(self.du_url, api_endpoint),
                                         headers=self.headers)
             if pf9_response.status_code != 200:
-                return num_active_masters 
-        
+                return num_active_masters
+
             # parse response
             json_response = json.loads(pf9_response.text)
         except:
@@ -89,21 +88,18 @@ class AttachCluster(object):
                 continue
             if node['clusterName'] == cluster_name:
                 try:
-                    node['isMaster']
-                    node['api_responding']
-                except:
+                    if node['isMaster'] ==  1 and node['api_responding'] == 1 \
+                            node['status'] == 'ok':
+                        num_active_masters += 1
+                except Exception:
                     continue
-
-                if node['isMaster'] == 1 and node['api_responding'] == 1:
-                    num_active_masters += 1
-
         return num_active_masters
 
 
     def get_resmgr_hostid(self, host_ip):
         try:
             api_endpoint = "resmgr/v1/hosts".format(self.project_id)
-            pf9_response = requests.get("{}/{}".format(self.du_url, api_endpoint), 
+            pf9_response = requests.get("{}/{}".format(self.du_url, api_endpoint),
                                         headers=self.headers)
             if pf9_response.status_code != 200:
                 return None
