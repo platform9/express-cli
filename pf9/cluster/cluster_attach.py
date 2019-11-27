@@ -89,7 +89,7 @@ class AttachCluster(object):
             if node['clusterName'] == cluster_name:
                 try:
                     if node['isMaster'] ==  1 and node['api_responding'] == 1 \
-                            node['status'] == 'ok':
+                            and node['status'] == 'ok':
                         num_active_masters += 1
                 except Exception:
                     continue
