@@ -69,7 +69,7 @@ class CreateCluster(object):
             "nodePoolUuid": nodepool_id,
             "masterVipIpv4": self.ctx.params['mastervip'],
             "masterVipIface": self.ctx.params['mastervipif'],
-            "metallbCidr": self.ctx.params['metallbcidr'],
+            "metallbCidr": self.ctx.params['metallbiprange'],
             "networkPlugin": self.ctx.params['networkplugin']
         }
         self.write_host("--> cluster configuration")
