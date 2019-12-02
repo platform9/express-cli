@@ -61,7 +61,8 @@ def run_express(ctx, inv_file, ips):
             elapsed =  elapsed + poll_interval_secs
             if elapsed < (total_nodes * time_per_host_secs - poll_interval_secs):
                 bar.update(poll_interval_secs)
-                time.sleep(poll_interval_secs)
+
+            time.sleep(poll_interval_secs)
 
         # Success or failure... push the progress to 100%
         bar.update(total_nodes * time_per_host_secs)
@@ -138,12 +139,14 @@ def create_cluster(ctx):
     # create cluster
     click.echo("Creating Cluster: {}".format(ctx.params['cluster_name']))
     cluster_status, cluster_uuid = CreateCluster(ctx).cluster_exists()
-        
+
     if cluster_status == True:
         click.echo("Cluster {} already exists".format(ctx.params['cluster_name']))
     else:
         CreateCluster(ctx).create_cluster()
         cluster_uuid = CreateCluster(ctx).wait_for_cluster()
+
+    click.echo("Cluster {} created successfully".format(ctx.params['cluster_name']))
 
     return cluster_uuid
 
@@ -162,20 +165,19 @@ def attach_cluster(cluster_name, master_ips, worker_ips, ctx):
 
     if master_ips:
         master_nodes = cluster_attacher.get_uuids(master_ips)
-        click.echo("Discovering UUIDs for cluster's master nodes")
-        click.echo("Master nodes: ")
+        click.echo("Discovering UUIDs for the cluster's master nodes")
+        click.echo("Master nodes:")
         for node in master_nodes:
             click.echo("{}".format(node))
 
     # get uuids for worker nodes
     if worker_ips:
         worker_nodes = cluster_attacher.get_uuids(worker_ips)
+        click.echo("Discovering UUIDs for the cluster's worker nodes")
         click.echo("Worker Nodes:")
         for node in worker_nodes:
             click.echo("{}".format(node))
 
-    # wait for cluster to by ready
-    click.echo("Attaching to cluster: {}".format(cluster_name))
     #TODO: Why is this even required??
     cluster_uuid = cluster_attacher.wait_for_cluster(cluster_name)
 
@@ -295,10 +297,10 @@ def create(ctx, **kwargs):
         click.secho("Failed to create cluster {}. {}".format(
                     ctx.params['cluster_name'], e.msg), fg="red")
         sys.exit(1)
-    else:
-        click.secho("Successfully created cluster {} "\
-                    "using this node".format(ctx.params['cluster_name']),
-                    fg="green")
+
+    click.secho("Successfully created cluster {} "\
+                "using this node".format(ctx.params['cluster_name']),
+                fg="green")
 
 
 @cluster.command('bootstrap')
@@ -346,10 +348,10 @@ def bootstrap(ctx, **kwargs):
         click.secho("Encountered an error while bootstrapping the local node to a Kubernetes"\
                     " cluster. {}".format(e.msg), fg="red")
         sys.exit(1)
-    else:
-        click.secho("Successfully created cluster {} "\
-                    "using this node".format(ctx.params['cluster_name']),
-                    fg="green")
+
+    click.secho("Successfully created cluster {} "\
+                "using this node".format(ctx.params['cluster_name']),
+                fg="green")
 
 
 @cluster.command('attach-node')
@@ -385,7 +387,16 @@ def attach_node(ctx, **kwargs):
 
     # There may be 0 masters, workers specified. The attach_cluster method
     # handles this situation
-    attach_cluster(ctx.params['cluster_name'], master_ips, worker_ips, ctx)
+    try:
+        attach_cluster(ctx.params['cluster_name'], master_ips, worker_ips, ctx)
+    except CLIException as e:
+        click.secho("Encountered an error while attaching nodes to a Kubernetes"\
+                    " cluster {}. {}".format(ctx.params['cluster_name'], e.msg), fg="red")
+        sys.exit(1)
+
+    click.secho("Successfully attached nodes to a Kubernetes cluster {} "\
+                "using this node".format(ctx.params['cluster_name']),
+                fg="green")
 
 
 @cluster.command('prep-node')
@@ -434,7 +445,7 @@ def prepnode(ctx, user, password, ssh_key, ips):
         click.secho("Encountered an error while preparing the provided nodes as " \
                     "Kubernetes nodes. {}".format(e.msg), fg="red")
         sys.exit(1)
-    else:
-        click.secho("Preparing the provided nodes to be added to Kubernetes cluster was successful",
-                    fg="green")
+
+    click.secho("Preparing the provided nodes to be added to Kubernetes cluster was successful",
+                fg="green")
 

@@ -6,18 +6,20 @@ import requests
 import json
 import signal
 
+from ..exceptions import ClusterAttachFailed
+
 # global variables
 control_plane_pause = 30
 
 def fail_bootstrap(m):
     if m != None:
-        click.echo("ERROR: {}\n".format(m))
+        click.echo("ERROR: {}".format(m))
     sys.exit(1)
 
 
 def write_host(m):
     if m != None:
-        click.echo("{}\n".format(m))
+        click.echo("{}".format(m))
 
 
 class AttachCluster(object):
@@ -53,21 +55,30 @@ class AttachCluster(object):
         TIMEOUT = 15
         POLL_INTERVAL = 30
         timeout = int(time.time()) + (60 * TIMEOUT)
+        current_active_masters = 0
         flag_found_n_masters = False
-        while True:
-            n = self.get_num_active_masters(cluster_name)
-            write_host("Waiting for {} masters to become active (current={})".format(master_node_num, n))
-            if int(n) == int(master_node_num):
-                flag_found_n_masters = True
-                break
-            elif int(time.time()) > timeout:
-                break
-            time.sleep(POLL_INTERVAL)
+        with click.progressbar(length=timeout, color="orange",
+                           label='Waiting for all masters to become active') as bar:
+            while True:
+                current_active_masters = self.get_num_active_masters(cluster_name)
+                if int(current_active_masters) == int(master_node_num):
+                    flag_found_n_masters = True
+                    break
+                elif int(time.time()) < timeout - POLL_INTERVAL:
+                    bar.update(POLL_INTERVAL)
+                elif int(time.time()) > timeout:
+                    break
+                
+                time.sleep(POLL_INTERVAL)
+
+            # Success or failure... push the progress to 100%
+            bar.update(timeout)
 
         # enforce TIMEOUT
         if not flag_found_n_masters:
-            fail_bootstrap("TIMEOUT: waiting for {} masters to become active".format(master_node_num))
-
+            msg = "Timed out waiting for {} master to become active. Current " \
+                  "active count {}.".format(master_node_num, current_active_masters)
+            raise FailedActiveMasters(msg)
 
     def get_num_active_masters(self, cluster_name):
         num_active_masters = 0
@@ -98,8 +109,8 @@ class AttachCluster(object):
 
     def get_resmgr_hostid(self, host_ip):
         try:
-            api_endpoint = "resmgr/v1/hosts".format(self.project_id)
-            pf9_response = requests.get("{}/{}".format(self.du_url, api_endpoint),
+            api_endpoint = "resmgr/v1/hosts"
+            pf9_response = requests.get("{}/{}".format(self.du_url, api_endpoint), 
                                         headers=self.headers)
             if pf9_response.status_code != 200:
                 return None
@@ -116,7 +127,7 @@ class AttachCluster(object):
             for key, value in host['extensions']['interfaces']['data'].items():
                 for iface_name, iface_ip in host['extensions']['interfaces']['data']['iface_ip'].items():
                     if iface_ip == host_ip:
-                        return(host['id'])
+                        return host['id']
 
 
     def get_uuids(self, host_ips):
@@ -126,6 +137,9 @@ class AttachCluster(object):
             host_uuid = self.get_resmgr_hostid(host_ip)
             if host_uuid != None:
                 host_uuids.append(host_uuid)
+            else:
+                # TODO: We should warn the end user and proceed?
+                pass
 
         return host_uuids
 
@@ -159,7 +173,7 @@ class AttachCluster(object):
         flag_cluster_exists = False
         while True:
             cluster_status, cluster_uuid = self.cluster_exists(cluster_name)
-            write_host("--> Checking if cluster is available, status = {}".format(cluster_status))
+            write_host("Checking if cluster is available, status = {}".format(cluster_status))
             if cluster_status == True:
                 flag_cluster_exists = True
                 break
@@ -170,14 +184,14 @@ class AttachCluster(object):
 
         # enforce TIMEOUT
         if not flag_cluster_exists:
-            fail_bootstrap("TIMEOUT: waiting for cluster to be created (qbert)")
+            fail_bootstrap("TIMEOUT: waiting for cluster to be available")
 
         # return cluster uuid
         return cluster_uuid
 
 
     def attach_to_cluster(self, cluster_uuid, node_type, uuid_list):
-        write_host("[Attaching {} nodes to cluster]".format(node_type))
+        write_host("Attaching {} nodes to the cluster".format(node_type))
 
         # configure attach payload (master nodes)
         cluster_attach_payload = []
@@ -220,9 +234,9 @@ class AttachCluster(object):
         cnt = 0
         while cnt < num_retries:
             if cnt > 0:
-                write_host("--> Attaching to cluster (retry {})".format(cnt))
+                write_host("Attaching to cluster (retry {})".format(cnt))
             else:
-                write_host("--> Attaching to cluster")
+                write_host("Attaching to cluster")
 
             try:
                 api_endpoint = "qbert/v3/{}/clusters/{}/attach".format(self.project_id,
@@ -231,10 +245,11 @@ class AttachCluster(object):
                                              headers=self.headers,
                                              data=json.dumps(cluster_attach_payload))
                 if pf9_response.status_code == 200:
-                    write_host("--> successfully attached to cluster")
+                    write_host("Successfully attached to cluster")
                     break
                 else:
-                    write_host("failed to attach to cluster: {}".format(pf9_response.text))
+                    msg = "Failed to attach to cluster: {}".format(pf9_response.text)
+                    write_host(msg)
             except:
                 pass
 
@@ -242,5 +257,8 @@ class AttachCluster(object):
             time.sleep(5)
 
         if cnt >= num_retries:
-            fail_bootstrap("failed to attach to cluster after {} attempts".format(num_retries))
+            msg = "Failed to attach to cluster after {} attempts".format(num_retries)
+            fail_bootstrap(msg)
+            raise ClusterAttachFailed(msg)
+
 
