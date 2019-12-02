@@ -297,10 +297,10 @@ def create(ctx, **kwargs):
         click.secho("Failed to create cluster {}. {}".format(
                     ctx.params['cluster_name'], e.msg), fg="red")
         sys.exit(1)
-    else:
-        click.secho("Successfully created cluster {} "\
-                    "using this node".format(ctx.params['cluster_name']),
-                    fg="green")
+
+    click.secho("Successfully created cluster {} "\
+                "using this node".format(ctx.params['cluster_name']),
+                fg="green")
 
 
 @cluster.command('bootstrap')
@@ -348,10 +348,10 @@ def bootstrap(ctx, **kwargs):
         click.secho("Encountered an error while bootstrapping the local node to a Kubernetes"\
                     " cluster. {}".format(e.msg), fg="red")
         sys.exit(1)
-    else:
-        click.secho("Successfully created cluster {} "\
-                    "using this node".format(ctx.params['cluster_name']),
-                    fg="green")
+
+    click.secho("Successfully created cluster {} "\
+                "using this node".format(ctx.params['cluster_name']),
+                fg="green")
 
 
 @cluster.command('attach-node')
@@ -445,7 +445,7 @@ def prepnode(ctx, user, password, ssh_key, ips):
         click.secho("Encountered an error while preparing the provided nodes as " \
                     "Kubernetes nodes. {}".format(e.msg), fg="red")
         sys.exit(1)
-    else:
-        click.secho("Preparing the provided nodes to be added to Kubernetes cluster was successful",
-                    fg="green")
+
+    click.secho("Preparing the provided nodes to be added to Kubernetes cluster was successful",
+                fg="green")
 
