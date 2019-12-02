@@ -69,6 +69,7 @@ class CreateCluster(object):
             "nodePoolUuid": nodepool_id,
             "masterVipIpv4": self.ctx.params['mastervip'],
             "masterVipIface": self.ctx.params['mastervipif'],
+            "enableMetallb": True if self.ctx.params['metallbiprange'] else False,
             "metallbCidr": self.ctx.params['metallbiprange'],
             "networkPlugin": self.ctx.params['networkplugin']
         }
