@@ -219,9 +219,9 @@ def cluster():
 @click.option('--appCatalogEnabled', type=bool, required=False, default=True, help="Enable Helm application catalog")
 @click.option('--allowWorkloadsOnMaster', type=bool, required=False, default=False, help="Taint master nodes (to enable workloads)")
 @click.option("--networkPlugin", type=str, required=False, default='flannel', help="Specify non-default network plugin (default = flannel)")
-@click.option('--user', '-u', help='Username for node.')
-@click.option('--password', '-p', help='Password for node if different than cluster default.')
-@click.option('--ssh-key', '-s', help='SSH key for node if different than cluster default.')
+@click.option('--user', '-u', help='SSH username for nodes.')
+@click.option('--password', '-p', help='SSH password for nodes.')
+@click.option('--ssh-key', '-s', help='SSH key for nodes.')
 @click.option('--master-ip', '-m', multiple=True, help='IPs of the master nodes. Specify multiple IPs by repeating this option.', required=True)
 @click.option('--worker-ip', '-w', multiple=True, help='IPs of the worker nodes. Specify multiple IPs by repeating this option.', default='')
 @click.pass_context
@@ -240,8 +240,8 @@ def create(ctx, **kwargs):
         all_ips = all_ips + ctx.params['worker_ip']
 
     try:
-        check_vip_needed(ctx.params['master_ip'], ctx.params.get('masterVip', None),
-                         ctx.params.get('masterVipIf', None))
+        check_vip_needed(ctx.params['master_ip'], ctx.params.get('mastervip', None),
+                         ctx.params.get('mastervipif', None))
 
         ctx.params['token'], ctx.params['project_id'] = get_token_project(ctx)
 
@@ -305,7 +305,7 @@ def create(ctx, **kwargs):
 @click.argument('cluster_name')
 @click.option('--masterVip', help='IP address for VIP for master nodes', default='')
 @click.option('--masterVipIf', help='Interface name for master/worker node', default='')
-@click.option('--metallbCidr', help='IP range for MetalLB (<startIP>-<endIp>)', default='')
+@click.option('--metallbIpRange', help='IP range for MetalLB (<startIP>-<endIp>)', default='')
 @click.option('--containersCidr', type=str, required=False, default='10.20.0.0/16', help="CIDR for container overlay")
 @click.option('--servicesCidr', type=str, required=False, default='10.21.0.0/16', help="CIDR for services overlay")
 @click.option('--externalDnsName', type=str, required=False, default='', help="External DNS name for master VIP")
