@@ -393,10 +393,10 @@ def attach_node(ctx, **kwargs):
         click.secho("Encountered an error while attaching nodes to a Kubernetes"\
                     " cluster {}. {}".format(ctx.params['cluster_name'], e.msg), fg="red")
         sys.exit(1)
-    else:
-        click.secho("Successfully attached nodes to a Kubernetes cluster {} "\
-                    "using this node".format(ctx.params['cluster_name']),
-                    fg="green")
+
+    click.secho("Successfully attached nodes to a Kubernetes cluster {} "\
+                "using this node".format(ctx.params['cluster_name']),
+                fg="green")
 
 
 @cluster.command('prep-node')
