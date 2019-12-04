@@ -52,12 +52,13 @@ class AttachCluster(object):
         return False, None
 
     def wait_for_n_active_masters(self, cluster_name, master_node_num):
-        TIMEOUT = 15
-        POLL_INTERVAL = 30
-        timeout = int(time.time()) + (60 * TIMEOUT)
+        TIMEOUT = 15 # in mins
+        POLL_INTERVAL = 30 # in secs
+        total_timeout_duration = 60 * TIMEOUT
+        timeout = int(time.time()) + total_timeout_duration
         current_active_masters = 0
         flag_found_n_masters = False
-        with click.progressbar(length=timeout, color="orange",
+        with click.progressbar(length=total_timeout_duration, color="orange",
                            label='Waiting for all masters to become active') as bar:
             while True:
                 current_active_masters = self.get_num_active_masters(cluster_name)
@@ -72,7 +73,7 @@ class AttachCluster(object):
                 time.sleep(POLL_INTERVAL)
 
             # Success or failure... push the progress to 100%
-            bar.update(timeout)
+            bar.update(total_timeout_duration)
 
         # enforce TIMEOUT
         if not flag_found_n_masters:
