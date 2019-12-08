@@ -425,7 +425,7 @@ def prepnode(ctx, user, password, ssh_key, ips):
     try:
         for ip in parse_ips:
             if ip == "127.0.0.1" or ip == "localhost" \
-                or ip in Utils().get_local_node_addresses():
+                or ip in get_local_node_addresses():
                 adj_ips = adj_ips + ("localhost",)
             else:
                 # check if ssh creds are provided.
