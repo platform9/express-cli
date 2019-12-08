@@ -22,7 +22,7 @@ def get_local_node_addresses():
     nw_ifs = netifaces.interfaces()
     nonlocal_ips = set()
     ignore_ip_re = re.compile('^(0.0.0.0|127.0.0.1)$')
-    ignore_if_re = re.compile('^(q.*-[0-9a-fA-F]{2}|tap.*)$')
+    ignore_if_re = re.compile('^(q.*-[0-9a-fA-F]{2}|tap.*|virbr.*)$')
 
     for iface in nw_ifs:
         if ignore_if_re.match(iface):
