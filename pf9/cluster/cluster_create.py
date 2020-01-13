@@ -64,7 +64,7 @@ class CreateCluster(object):
             "appCatalogEnabled": self.ctx.params['appcatalogenabled'],
             "allowWorkloadsOnMaster": self.ctx.params['allowworkloadsonmaster'],
             "masterless": False,
-            "tags": {},
+            "tags": {"pf9-system:monitoring": "true"}, # opt-out monitoring
             "runtimeConfig": "",
             "nodePoolUuid": nodepool_id,
             "masterVipIpv4": self.ctx.params['mastervip'],
