@@ -1,13 +1,7 @@
 """
 Exceptions for Cluster Operations
 """
-
-class CLIException(Exception):
-    def __init__(self, msg):
-        self.msg = msg
-
-    def __repr__(self):
-        return self.msg
+from ..modules.exceptions import CLIException
 
 class ClusterCLIException(CLIException):
     def __init__(self, msg):

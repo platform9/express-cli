@@ -1,4 +1,4 @@
-from ..exceptions import SSHInfoMissing, MissingVIPDetails
+from .exceptions import SSHInfoMissing, MissingVIPDetails
 import netifaces
 import re
 

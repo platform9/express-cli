@@ -6,7 +6,7 @@ import requests
 import json
 import signal
 
-from ..exceptions import ClusterAttachFailed
+from .exceptions import ClusterAttachFailed, FailedActiveMasters
 
 # global variables
 control_plane_pause = 30

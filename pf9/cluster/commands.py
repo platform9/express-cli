@@ -8,7 +8,8 @@ import subprocess
 import sys
 import tempfile
 import time
-from ..exceptions import CLIException, PrepNodeFailed
+from ..modules.exceptions import CLIException
+from .exceptions import PrepNodeFailed
 from .helpers import validate_ssh_details, get_local_node_addresses, check_vip_needed
 from ..modules.ostoken import GetToken
 from ..modules.util import GetConfig 
@@ -82,7 +83,7 @@ def build_express_inventory_file(ctx, user, password, ssh_key, ips,
     node_details = ''
     # Read in inventory template file
     cur_dir_path = os.path.dirname(os.path.realpath(__file__))
-    inv_file_template = os.path.join(cur_dir_path, '..', 'templates',
+    inv_file_template = os.path.join(cur_dir_path, 'templates',
                                      'pmk_inventory.tpl')
 
     with open(inv_file_template) as f:

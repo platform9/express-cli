@@ -53,7 +53,7 @@ setup(
         'Programming Language :: Python :: 3.4',
     ],
     package_data = {
-        'pf9':['templates/*',],
+        'pf9/cluster':['templates/*',],
     },
     include_package_data=True,
     zip_safe=False,

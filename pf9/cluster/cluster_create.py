@@ -4,7 +4,7 @@ import time
 import requests
 import json
 import click
-from ..exceptions import ClusterCreateFailed
+from .exceptions import ClusterCreateFailed
 
 class CreateCluster(object):
     def __init__(self, ctx):

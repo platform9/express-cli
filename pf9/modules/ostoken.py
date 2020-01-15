@@ -4,12 +4,12 @@
 # Tested with python 2.7 and 3.7.0 on OSX and Ubuntu 17.10
 # maintainer: tom.christopoulos@platform9.com
 
-from ..exceptions import UserAuthFailure
 import click
 import json
 import requests
 import sys
 
+from .exceptions import UserAuthFailure
 
 class GetToken:
 
