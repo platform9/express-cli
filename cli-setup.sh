@@ -172,30 +172,20 @@ setup_venv() {
 }
 
 prompt_account_inputs() {
-<<<<<<< HEAD
-    read -p "Platform9 account management URL [Example: https://example.platform9.io]: " MGMTURL
-=======
     if [ -z "${MGMTURL}" ]; then
         read -p "Platform9 account management URL [Example: https://example.platform9.io]: " MGMTURL
     fi
->>>>>>> Allow Platform9 account details to be specified with CLI setup command
     if [[ ${MGMTURL} != https://* ]]; then
         MGMTURL=https://${MGMTURL}
         write_out_log "Platform9 account management URL should start with https://. Trying with ${MGMTURL}"
     fi
-<<<<<<< HEAD
-    read -p "Platform9 username: " USER
-    read -sp "Platform9 user password: " PASS
-    echo
-=======
-    if [ -z "${USER}" ]; then
-        read -p "Platform9 username: " USER
+    if [ -z "${PF9_USER}" ]; then
+        read -p "Platform9 username: " PF9_USER
     fi
     if [ -z "${PASS}" ]; then
         read -sp "Platform9 user password: " PASS
         echo
     fi
->>>>>>> Allow Platform9 account details to be specified with CLI setup command
     # Assume defaults for the region/project unless we get it from the env
     if [ -z "${PF9_PROJECT}" ]; then
         PROJECT=service
@@ -236,8 +226,8 @@ setup_express() {
     attempt=1
     while [ $attempt -le 3 ]; do
         prompt_account_inputs
-        echo "Running ${cli_setup_dir}/bin/express config create --config_name pf9-express ${configname} --du ${MGMTURL} --os_username ${USER} --os_password *** --os_region ${REGION} --os_tenant ${PROJECT}" >> ${log}
-        ${cli_setup_dir}/bin/express config create --config_name pf9-express ${configname} --du ${MGMTURL} --os_username ${USER} --os_password ${PASS} --os_region ${REGION} --os_tenant ${PROJECT} 2>&1 >> ${log}
+        echo "Running ${cli_setup_dir}/bin/express config create --config_name pf9-express ${configname} --du ${MGMTURL} --os_username ${PF9_USER} --os_password *** --os_region ${REGION} --os_tenant ${PROJECT}" >> ${log}
+        ${cli_setup_dir}/bin/express config create --config_name pf9-express ${configname} --du ${MGMTURL} --os_username ${PF9_USER} --os_password ${PASS} --os_region ${REGION} --os_tenant ${PROJECT} 2>&1 >> ${log}
         write_out_log "Validating the provided Platform9 account details"
         ${cli_setup_dir}/bin/express config validate 2>&1 >> ${log}
         if [ $? -ne 0 ]; then
@@ -273,7 +263,7 @@ while [ $# -gt 0 ]; do
     shift
     ;;
     --pf9_username)
-        USER=${2}
+        PF9_USER=${2}
     shift
     ;;
     --pf9_password)
