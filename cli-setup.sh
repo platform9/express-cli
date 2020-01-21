@@ -177,19 +177,13 @@ setup_venv() {
 }
 
 prompt_account_inputs() {
-    if [[ ! ${MGMTURL} ]]; then
-        read -p "Platform9 account management URL [Example: https://example.platform9.io]: " MGMTURL
-    fi
+    read -p "Platform9 account management URL [Example: https://example.platform9.io]: " MGMTURL
     if [[ ${MGMTURL} != https://* ]]; then
         MGMTURL=https://${MGMTURL}
         write_out_log "Platform9 account management URL should start with https://. Trying with ${MGMTURL}"
     fi
-    if [[ ! ${USER} ]]; then
-        read -p "Platform9 username: " USER
-    fi
-    if [[ ! ${PASS} ]]; then
-        read -sp "Platform9 user password: " PASS
-    fi
+    read -p "Platform9 username: " USER
+    read -sp "Platform9 user password: " PASS
     echo
     # Assume defaults for the region/project unless we get it from the env
     if [ -z "${PF9_PROJECT}" ]; then
