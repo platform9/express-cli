@@ -1,9 +1,12 @@
 import click
+import click_repl
 import os
+import sys
 import json
 import requests
 import tarfile
 import shutil
+from prompt_toolkit.history import FileHistory
 
 from os.path import expanduser
 from .modules.util import Pf9ExpVersion
@@ -12,7 +15,7 @@ from .config.commands import config
 from .cli.commands import version 
 from .cluster.commands import cluster 
 
-@click.group()
+@click.group(invoke_without_command=True)
 @click.version_option(message='%(version)s')
 @click.pass_context
 def cli(ctx):
@@ -28,6 +31,13 @@ def cli(ctx):
     ctx.obj['pf9_exp_conf_dir'] = os.path.join(ctx.obj['pf9_exp_dir'], 'config/')
     ctx.obj['pf9_exp_ansible_runner'] = os.path.join(ctx.obj['pf9_exp_dir'],
                                                      'express', 'pf9-express')
+    click.echo(click.get_current_context(ctx).info_name)
+    if not ctx.invoked_subcommand:
+        """Start an interactive session"""
+        prompt_kwargs = { 
+            'history': FileHistory(os.path.expanduser('~/.repl_history'))
+        }   
+        click_repl.repl(click.get_current_context(ctx), prompt_kwargs=prompt_kwargs)
 
 cli.add_command(version)
 cli.add_command(config)
@@ -139,4 +149,14 @@ def upgrade(obj):
     
     else:
         click.echo('Platform9 Express is already the latest version')
+
+@cli.command('exit')
+@click.pass_context
+def exit(ctx):
+    """exit"""
+    click.Context(ctx).close()
+    sys.exit(0)
+
+if __name__ == '__main__':
+    cli()
 
