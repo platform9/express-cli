@@ -15,10 +15,9 @@ write_out_log_no_new_line() {
 }
 
 install_prereqs() {
-    write_out_log_no_new_line "Validating package dependencies: "
+    write_out_log "Validating and installing package dependencies"
     if [ "${platform}" == "ubuntu" ]; then
         # add ansible repository
-        write_out_log_no_new_line "${pkg} "
         dpkg-query -f '${binary:Package}\n' -W | grep ^ansible$ > /dev/null 2>&1
         if [ $? -ne 0 ]; then
             sudo apt-add-repository -y ppa:ansible/ansible > /dev/null 2>&1
@@ -31,7 +30,6 @@ install_prereqs() {
         fi
 
         for pkg in jq bc; do
-            write_out_log_no_new_line "${pkg} "
             dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
             if [ $? -ne 0 ]; then
                 sudo apt-get -y install ${pkg} >> ${log} 2>&1
@@ -41,7 +39,6 @@ install_prereqs() {
                 fi
             fi
         done
-        write_out_log ""
     else
         echo -e "\nERROR: Unsupported platform ${platform}. Please use an Ubuntu 16.04 platform"; exit 1
     fi
@@ -57,16 +54,14 @@ install_pip_prereqs() {
         fi
 
         ## install additional pip-based packages
-        write_out_log_no_new_line "Installing dependencies from pypi in ${cli_setup_dir}: "
+        write_out_log "Installing dependencies from pypi in ${cli_setup_dir}"
         for pkg in openstacksdk; do
-            echo -n "${pkg} "
             sudo ${cli_setup_dir}/bin/pip install ${pkg} --ignore-installed >> ${log} 2>&1
             if [ $? -ne 0 ]; then
             echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
             tail -10 ${log}; exit 1
             fi
         done
-        echo
 
     # create log directory
     if [ ! -d /var/log/pf9 ]; then sudo mkdir -p /var/log/pf9; fi
@@ -177,14 +172,30 @@ setup_venv() {
 }
 
 prompt_account_inputs() {
+<<<<<<< HEAD
     read -p "Platform9 account management URL [Example: https://example.platform9.io]: " MGMTURL
+=======
+    if [ -z "${MGMTURL}" ]; then
+        read -p "Platform9 account management URL [Example: https://example.platform9.io]: " MGMTURL
+    fi
+>>>>>>> Allow Platform9 account details to be specified with CLI setup command
     if [[ ${MGMTURL} != https://* ]]; then
         MGMTURL=https://${MGMTURL}
         write_out_log "Platform9 account management URL should start with https://. Trying with ${MGMTURL}"
     fi
+<<<<<<< HEAD
     read -p "Platform9 username: " USER
     read -sp "Platform9 user password: " PASS
     echo
+=======
+    if [ -z "${USER}" ]; then
+        read -p "Platform9 username: " USER
+    fi
+    if [ -z "${PASS}" ]; then
+        read -sp "Platform9 user password: " PASS
+        echo
+    fi
+>>>>>>> Allow Platform9 account details to be specified with CLI setup command
     # Assume defaults for the region/project unless we get it from the env
     if [ -z "${PF9_PROJECT}" ]; then
         PROJECT=service
@@ -252,9 +263,30 @@ setup_express() {
 }
 
 while [ $# -gt 0 ]; do
+    # Needs more error handling in case arg parsing fails
     case ${1} in
     -t|--test)
         flag_testsetup=1
+    ;;
+    --pf9_account_url)
+        MGMTURL=${2}
+    shift
+    ;;
+    --pf9_username)
+        USER=${2}
+    shift
+    ;;
+    --pf9_password)
+        PASS=${2}
+    shift
+    ;;
+    --pf9_region)
+        REGION=${2}
+    shift
+    ;;
+    --pf9_project)
+        TENANT=${2}
+    shift
     ;;
     -l|--log)
         log=${2}
