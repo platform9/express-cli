@@ -207,28 +207,28 @@ def prep_node(ctx, user, password, ssh_key, ips, node_prep_only):
 
 @click.group()
 def cluster():
-    """Platform9 Managed Kuberenetes cluster operations"""
+    """Platform9 Managed Kuberenetes cluster operations. Read more at http://pf9.io/cli_clhelp."""
 
 @cluster.command('create')
 @click.argument('cluster_name')
-@click.option('--masterVip', help='IP address for VIP for master nodes', default='')
-@click.option('--masterVipIf', help='Interface name on which the VIP should bind to', default='')
-@click.option('--metallbIpRange', help='IP range for MetalLB (<startIP>-<endIp>)', default='')
+@click.option('--master-ip', '-m', multiple=True, help='IPs of the master nodes. Specify multiple IPs by repeating this option.', required=True)
+@click.option('--worker-ip', '-w', multiple=True, help='IPs of the worker nodes. Specify multiple IPs by repeating this option.', default='')
+@click.option('--user', '-u', help='SSH username for nodes.')
+@click.option('--password', '-p', help='SSH password for nodes.')
+@click.option('--ssh-key', '-s', help='SSH key for nodes.')
+@click.option('--masterVip', help='IP address for VIP for master nodes. Read more at http://pf9.io/pmk_vip.', default='')
+@click.option('--masterVipIf', help='Interface name on which the VIP should bind to. Read more at http://pf9.io/pmk_vip.', default='')
+@click.option('--metallbIpRange', help='IP range for MetalLB (<startIP>-<endIp>). Read more at http://pf9.io/pmk_metallb.', default='')
 @click.option('--containersCidr', type=str, required=False, default='10.20.0.0/16', help="CIDR for container overlay")
 @click.option('--servicesCidr', type=str, required=False, default='10.21.0.0/16', help="CIDR for services overlay")
 @click.option('--externalDnsName', type=str, required=False, default='', help="External DNS name for master VIP")
 @click.option('--privileged', type=bool, required=False, default=True, help="Enable privileged mode for Kubernetes API")
 @click.option('--appCatalogEnabled', type=bool, required=False, default=True, help="Enable Helm application catalog")
 @click.option('--allowWorkloadsOnMaster', type=bool, required=False, default=False, help="Taint master nodes (to enable workloads)")
-@click.option("--networkPlugin", type=str, required=False, default='flannel', help="Specify non-default network plugin (default = flannel)")
-@click.option('--user', '-u', help='SSH username for nodes.')
-@click.option('--password', '-p', help='SSH password for nodes.')
-@click.option('--ssh-key', '-s', help='SSH key for nodes.')
-@click.option('--master-ip', '-m', multiple=True, help='IPs of the master nodes. Specify multiple IPs by repeating this option.', required=True)
-@click.option('--worker-ip', '-w', multiple=True, help='IPs of the worker nodes. Specify multiple IPs by repeating this option.', default='')
+@click.option("--networkPlugin", type=str, required=False, default='flannel', help="Specify network plugin (Possible values: flannel or calico, Default: flannel)")
 @click.pass_context
 def create(ctx, **kwargs):
-    """Create a Kubernetes cluster"""
+    """Create a Kubernetes cluster. Read more at http://pf9.io/cli_clcreate."""
 
     master_ips = ctx.params['master_ip']
     ctx.params['master_ip'] = ''.join(master_ips).split(' ') if all(len(x)==1 for x in master_ips) else list(master_ips)
@@ -305,20 +305,20 @@ def create(ctx, **kwargs):
 
 @cluster.command('bootstrap')
 @click.argument('cluster_name')
-@click.option('--masterVip', help='IP address for VIP for master nodes', default='')
-@click.option('--masterVipIf', help='Interface name for master/worker node', default='')
-@click.option('--metallbIpRange', help='IP range for MetalLB (<startIP>-<endIp>)', default='')
+@click.option('--masterVip', help='IP address for VIP for master nodes. Read more at http://pf9.io/pmk_vip.', default='')
+@click.option('--masterVipIf', help='Interface name for master/worker node. Read more at http://pf9.io/pmk_vip.', default='')
+@click.option('--metallbIpRange', help='IP range for MetalLB (<startIP>-<endIp>). Read more at http://pf9.io/pmk_metallb.', default='')
 @click.option('--containersCidr', type=str, required=False, default='10.20.0.0/16', help="CIDR for container overlay")
 @click.option('--servicesCidr', type=str, required=False, default='10.21.0.0/16', help="CIDR for services overlay")
 @click.option('--externalDnsName', type=str, required=False, default='', help="External DNS name for master VIP")
 @click.option('--privileged', type=bool, required=False, default=True, help="Enable privileged mode for Kubernetes API")
 @click.option('--appCatalogEnabled', type=bool, required=False, default=True, help="Enable Helm application catalog")
 @click.option('--allowWorkloadsOnMaster', type=bool, required=False, default=True, help="Taint master nodes (to enable workloads)")
-@click.option("--networkPlugin", type=str, required=False, default='flannel', help="Specify non-default network plugin (default = flannel)")
+@click.option("--networkPlugin", type=str, required=False, default='flannel', help="Specify network plugin (Possible values: flannel or calico, Default: flannel)")
 @click.pass_context
 def bootstrap(ctx, **kwargs):
     """
-    Bootstrap a single node Kubernetes cluster with your current host as the Kubernetes node.
+    Bootstrap a single node Kubernetes cluster with your current host as the Kubernetes node. Read more at http://pf9.io/cli_clbootstrap.
     """
     prompt_msg = "Proceed with creating a Kubernetes cluster with the current node as the Kubernetes master [y/n]?"
     localnode_confirm = click.prompt(prompt_msg, default='y')
@@ -361,7 +361,7 @@ def bootstrap(ctx, **kwargs):
 @click.pass_context
 def attach_node(ctx, **kwargs):
     """
-    Attach provided nodes the specified cluster
+    Attach provided nodes the specified cluster. Read more at http://pf9.io/cli_clattach.
     """
     if not ctx.params['master_ip'] and not ctx.params['worker_ip']:
         msg = "No nodes were specified to be attached to the cluster {}."
@@ -407,7 +407,7 @@ def attach_node(ctx, **kwargs):
 @click.pass_context
 def prepnode(ctx, user, password, ssh_key, ips):
     """ 
-    Prepare a node to be ready to be added to a Kubernetes cluster
+    Prepare a node to be ready to be added to a Kubernetes cluster. Read more at http://pf9.io/cli_clprep.
     """
     if not ips:
         prompt_msg = "No IPs provided. Proceed with preparing the current node to be added to a Kubernetes cluster [y/n]?"
