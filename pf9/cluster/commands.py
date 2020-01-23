@@ -225,7 +225,7 @@ def cluster():
 @click.option('--privileged', type=bool, required=False, default=True, help="Enable privileged mode for Kubernetes API")
 @click.option('--appCatalogEnabled', type=bool, required=False, default=True, help="Enable Helm application catalog")
 @click.option('--allowWorkloadsOnMaster', type=bool, required=False, default=False, help="Taint master nodes (to enable workloads)")
-@click.option("--networkPlugin", type=str, required=False, default='flannel', help="Specify non-default network plugin (default = flannel)")
+@click.option("--networkPlugin", type=str, required=False, default='flannel', help="Specify network plugin (Possible values: flannel or calico, Default: flannel)")
 @click.pass_context
 def create(ctx, **kwargs):
     """Create a Kubernetes cluster. Read more at http://pf9.io/cli_clcreate."""
@@ -305,16 +305,16 @@ def create(ctx, **kwargs):
 
 @cluster.command('bootstrap')
 @click.argument('cluster_name')
-@click.option('--masterVip', help='IP address for VIP for master nodes', default='')
-@click.option('--masterVipIf', help='Interface name for master/worker node', default='')
-@click.option('--metallbIpRange', help='IP range for MetalLB (<startIP>-<endIp>)', default='')
+@click.option('--masterVip', help='IP address for VIP for master nodes. Read more at http://pf9.io/pmk_vip.', default='')
+@click.option('--masterVipIf', help='Interface name for master/worker node. Read more at http://pf9.io/pmk_vip.', default='')
+@click.option('--metallbIpRange', help='IP range for MetalLB (<startIP>-<endIp>). Read more at http://pf9.io/pmk_metallb.', default='')
 @click.option('--containersCidr', type=str, required=False, default='10.20.0.0/16', help="CIDR for container overlay")
 @click.option('--servicesCidr', type=str, required=False, default='10.21.0.0/16', help="CIDR for services overlay")
 @click.option('--externalDnsName', type=str, required=False, default='', help="External DNS name for master VIP")
 @click.option('--privileged', type=bool, required=False, default=True, help="Enable privileged mode for Kubernetes API")
 @click.option('--appCatalogEnabled', type=bool, required=False, default=True, help="Enable Helm application catalog")
 @click.option('--allowWorkloadsOnMaster', type=bool, required=False, default=True, help="Taint master nodes (to enable workloads)")
-@click.option("--networkPlugin", type=str, required=False, default='flannel', help="Specify non-default network plugin (default = flannel)")
+@click.option("--networkPlugin", type=str, required=False, default='flannel', help="Specify network plugin (Possible values: flannel or calico, Default: flannel)")
 @click.pass_context
 def bootstrap(ctx, **kwargs):
     """
