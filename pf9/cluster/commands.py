@@ -197,7 +197,7 @@ def prep_node(ctx, user, password, ssh_key, ips, node_prep_only):
     only_local_node = False
     if len(ips) == 1 and ips[0] == 'localhost':
         only_local_node = True
-        click.echo('Prepping the local node to be added to Platform9 Managed Kubernetes')
+        click.echo('Preparing the local node to be added to Platform9 Managed Kubernetes')
 
     inv_file = build_express_inventory_file(ctx, user, password, ssh_key, ips,
                                             only_local_node, node_prep_only)
@@ -399,11 +399,11 @@ def attach_node(ctx, **kwargs):
                 fg="green")
 
 
-@cluster.command('prep-node')
+@cluster.command('prepare-node')
 @click.option('--user', '-u', help='SSH username for nodes.')
 @click.option('--password', '-p', help='SSH password for nodes.')
 @click.option('--ssh-key', '-s', help='SSH key for nodes.')
-@click.option('--ips', '-i', multiple=True, help='IPs of the host to be prepped. Specify multiple IPs by repeating this option.')
+@click.option('--ips', '-i', multiple=True, help='IPs of the host to be prepared. Specify multiple IPs by repeating this option.')
 @click.pass_context
 def prepnode(ctx, user, password, ssh_key, ips):
     """ 
