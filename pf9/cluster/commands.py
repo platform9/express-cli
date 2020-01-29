@@ -399,7 +399,7 @@ def attach_node(ctx, **kwargs):
                 fg="green")
 
 
-@cluster.command('prepare-node')
+@cluster.command('prep-node')
 @click.option('--user', '-u', help='SSH username for nodes.')
 @click.option('--password', '-p', help='SSH password for nodes.')
 @click.option('--ssh-key', '-s', help='SSH key for nodes.')
