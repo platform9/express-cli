@@ -180,7 +180,7 @@ prompt_account_inputs() {
         write_out_log "Platform9 account management URL should start with https://. Trying with ${MGMTURL}"
     fi
     if [ -z "${PF9_USER}" ]; then
-        read -p "Platform9 username: " PF9_USER
+        read -p "Platform9 account email: " PF9_USER
     fi
     if [ -z "${PASS}" ]; then
         read -sp "Platform9 user password: " PASS
@@ -262,7 +262,7 @@ while [ $# -gt 0 ]; do
         MGMTURL=${2}
     shift
     ;;
-    --pf9_username)
+    --pf9_email)
         PF9_USER=${2}
     shift
     ;;
