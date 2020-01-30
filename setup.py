@@ -1,12 +1,22 @@
 """Packaging settings."""
 
-
+import sys
 from codecs import open
 from subprocess import call
 
 from setuptools import Command, find_packages, setup
 
 from pf9 import __version__
+
+# set env_vars for python intpretor that was used for install
+py_env = sys.prefix
+os.environ["EXPRESS_CLI_PYTHON"] = str(sys.executable) 
+os.environ["EXPRESS_CLI_VENV"] = str(py_env) 
+os.environ["EXPRESS_CLI_VENV_ACTIVATE"] = "{}/bin/activate".format(py_env)
+
+# The above values should be written to a config file in ~/pf9/bin/
+# sym links to the venv/activate and entry points should be created there
+# User's PATH should be updated to include ~/pf9/bin/ with entry in ~/.bashrc or ~/.bash_profile
 
 
 class RunTests(Command):
@@ -54,7 +64,7 @@ setup(
     zip_safe=False,
     keywords = 'cli',
     packages = find_packages(exclude=['docs', 'tests*']),
-    install_requires = ['click', 'prettytable', 'requests', 'netifaces', 'colorama', 'ansible', 'wheel'],
+    install_requires = ['click', 'prettytable', 'requests', 'netifaces', 'colorama', 'ansible', 'wheel', 'openstacksdk'],
     extras_require = {
         'test': ['coverage', 'pytest', 'pytest-cov', 'mock'],
     },
