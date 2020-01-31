@@ -36,22 +36,27 @@ class GetToken:
                 }
             }
         }
-        r = requests.post(keystone_endpoint, headers=headers,
-                          json=body)
+        try:
+            r = requests.post(keystone_endpoint, headers=headers, json=body)
+            if r.status_code not in (200, 201):
+                click.echo("{0}: {1}".format(r.status_code, r.text))
+                msg = "Failed to authenticate with {}".format(host)
+                raise UserAuthFailure(msg)
 
-        if r.status_code not in (200, 201):
-            click.echo("{0}: {1}".format(r.status_code, r.text))
-            msg = "Failed to authenticate with {}".format(host)
-            raise UserAuthFailure(msg)
-
-        response = {
-                "headers": r.headers,
-                "json": r.json()
-                }
-        return response 
+            response = {
+                    "headers": r.headers,
+                    "json": r.json()
+                    }
+            return response 
+        except requests.exceptions.MissingSchema as e:
+            raise UserAuthFailure(str(e))
 
     def get_token_v3(self, host, username, password, tenant):
-        os_auth_req = self.os_auth(host, username, password, tenant)
+        try:
+            os_auth_req = self.os_auth(host, username, password, tenant)
+        except Exception as e:
+            click.echo(e)
+            sys.exit(1)
         token = os_auth_req['headers']['X-Subject-Token']
         return token
 

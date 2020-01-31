@@ -30,19 +30,19 @@ def run_command(command, run_env=os.environ):
         click.echo('%s command failed: %s', command, e)
         return e.returncode, e.output
 
+
 def run_express(ctx, inv_file, ips):
     # Build the pf9-express command to run
     exp_ansible_runner = os.path.join(ctx.obj['pf9_exp_dir'], 'express', 'pf9-express')
     exp_config_file = os.path.join(ctx.obj['pf9_exp_dir'], 'config', 'express.conf')
-    log_file = os.path.join("/var/log/pf9",
-                            datetime.now().strftime('express_%Y_%m_%d-%H_%m_%S.log'))
+    log_file = os.path.abspath(os.path.join(os.path.join(ctx.obj['pf9_exp_dir'], os.pardir), 'log', datetime.now().strftime('express_%Y_%m_%d-%H_%m_%S.log')))
     # Invoke PMK only related playbook.
     # Should this be defined directly in the inv file template? It could be a global setting
     # for CLI inventory files.
-    ansible_extra_vars = "\"custom_py_interpreter=/opt/pf9/cli/bin/python\""
-    cmd = 'sudo {0} -a -b --pmk -v {1} -c {2} -l {3} -e {4} pmk'.format(exp_ansible_runner,
+    #ansible_extra_vars = "\"ansible_python_interpreter={}\"".format(sys.executable)
+    cmd = '{0} -a -b --pmk -v {1} -c {2} -l {3} pmk'.format(exp_ansible_runner,
                                                                  inv_file, exp_config_file,
-                                                                 log_file, ansible_extra_vars)
+                                                                 log_file)
     # Current implementation is to have this express invocation dumps logs in 
     # a known location instead of capturing it here. Here we care only about
     # the exit code and fake progress.
@@ -95,12 +95,13 @@ def build_express_inventory_file(ctx, user, password, ssh_key, ips,
         inv_file_path = os.path.join(tmp_dir, 'exp-inventory')
 
         if only_local_node:
-            node_details = 'localhost ansible_python_interpreter=/opt/pf9/cli/bin/python ansible_connection=local ansible_host=localhost\n'
+
+            node_details = 'localhost ansible_python_interpreter=sys.executable ansible_connection=local ansible_host=localhost\n'
         else:
             # Build the great inventory file
             for ip in ips:
                 if ip == 'localhost':
-                    node_info = 'localhost ansible_python_interpreter=/opt/pf9/cli/bin/python ansible_connection=local ansible_host=localhost\n'
+                    node_info = 'localhost ansible_python_interpreter=sys.executable ansible_connection=local ansible_host=localhost\n'
                 else:
                     if password:
                         node_info = "{0} ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_user={1} ansible_ssh_pass={2}\n".format(
@@ -441,7 +442,6 @@ def prepnode(ctx, user, password, ssh_key, ips):
 
         rcode, output_file = prep_node(ctx, user, password, ssh_key,
                                     adj_ips, node_prep_only=True)
-
     except CLIException as e:
         click.secho("Encountered an error while preparing the provided nodes as " \
                     "Kubernetes nodes. {}".format(e.msg), fg="red")
