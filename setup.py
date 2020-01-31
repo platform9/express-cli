@@ -1,6 +1,7 @@
 """Packaging settings."""
 
 import sys
+import os
 from codecs import open
 from subprocess import call
 
