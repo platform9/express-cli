@@ -8,7 +8,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from ..modules.exceptions import CLIException
+from ..exceptions import CLIException
 from .exceptions import PrepNodeFailed
 from .helpers import validate_ssh_details, get_local_node_addresses, check_vip_needed
 from ..modules.ostoken import GetToken
@@ -115,7 +115,7 @@ def build_express_inventory_file(ctx, user, password, ssh_key, ips,
         file_data = inv_template.safe_substitute(node_details=node_details)
         with open(inv_file_path, 'w') as inv_file:
             inv_file.write(file_data)
-        
+        click.echo("Inventory:\n{}".format(file_data))
     else:
         # Build inventory file in specific dir hierarchy
         # TODO: to be implemented

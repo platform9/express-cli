@@ -1,6 +1,8 @@
 import os
 import requests
 import click
+from ..exceptions import CLIException
+
 
 class GetConfig(object):
     def __init__(self, ctx):
@@ -13,14 +15,17 @@ class GetConfig(object):
             try:
                 with open(config_file, 'r') as data:
                     config_file_lines = data.readlines()
-            except:
-                click.echo('Failed reading %s: '% config_file)
+            except Exception:
+                msg = "Failed reading {}: ".format(config_file)
+                raise CLIException(msg)
+
             config = Utils().config_to_dict(config_file_lines)
             if config is not None:
                 self.ctx.params['du_url'] = config["du_url"]
                 self.ctx.params['du_username'] = config["os_username"]
                 self.ctx.params['du_password'] = config["os_password"]
                 self.ctx.params['du_tenant'] = config["os_tenant"]
+                self.ctx.params['du_region'] = config["os_region"]
             return self.ctx
         else:
             click.echo('No active config. Please define or activate a config.')
@@ -72,9 +77,10 @@ class Pf9ExpVersion:
         try:
             with open(path, 'r') as value:
                 version = value.readline().strip()
-                return version
-        except:
-            return error
+            return version
+        except Exception as e:
+            msg = "Failed reading {}: ".format(path)
+            raise CLIException(e)  
 
     def get_release_json(self, release='latest'):
         req = requests.get('https://api.github.com/repos/platform9/express/releases/' + release)

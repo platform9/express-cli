@@ -1,10 +1,15 @@
 import click
 import os
+import sys
 import shutil
 from prettytable import PrettyTable
+from ..exceptions import CLIException
+from ..exceptions import UserAuthFailure 
 from ..modules.ostoken import GetToken
+from ..modules.ostoken import GetRegionURL
 from ..modules.util import Utils 
 from ..modules.util import GetConfig 
+
 
 @click.group()
 def config():
@@ -134,16 +139,79 @@ def activate(obj, config):
 def config_validate(ctx, **kwargs):
     """Validate active Platform9 management plane config."""
     # Validates pf9-express config file and obtains Auth Token
-    #Load Active Config into ctx
+    # Load Active Config into ctx
     GetConfig(ctx).GetActiveConfig()
     #Get Token
-    token = GetToken().get_token_v3(
+    try:
+        token = GetToken().get_token_v3(
                 ctx.params["du_url"],
                 ctx.params["du_username"],
                 ctx.params["du_password"],
                 ctx.params["du_tenant"] )
-    if token is not None:
-        click.echo('Config Validated!')
-        click.echo('Token: %s' % token)
-    else:
-        click.echo('Config Validation Failed!')
+        if token is not None:
+            return token
+        else:
+            msg = "Failed to obtain Authentication from: {}".format(ctx.params["du_url"])
+            raise CLIException(msg)
+    except (UserAuthFailure, CLIException) as e:
+        click.echo(e, err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo("Message: {}\n    type: {}".format(e, type(e)), err=True)
+        sys.exit(1)
+
+@config.command('get-token')
+@click.pass_context
+def get_token(ctx, **kwargs):
+    """Validate active Platform9 management plane config."""
+    # Validates pf9-express config file and obtains Auth Token
+    #Load Active Config into ctx
+    GetConfig(ctx).GetActiveConfig()
+    #Get Token
+    try:
+        token = GetToken().get_token_v3(
+                ctx.params["du_url"],
+                ctx.params["du_username"],
+                ctx.params["du_password"],
+                ctx.params["du_tenant"] )
+        if token is not None:
+            click.echo("Management Plane: {}".format(ctx.params["du_url"]))
+            click.echo("Username: {}".format(ctx.params["du_username"]))
+            click.echo("Region: {}".format(ctx.params["du_region"]))
+            click.echo("Token: %s" % token)
+        else:
+            msg = "Failed to obtain Authentication from: {}".format(ctx.params["du_url"])
+            raise CLIException(msg)
+    except (UserAuthFailure, CLIException) as e:
+        click.echo(e, err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo("Message: {}\n    type: {}".format(e, type(e)), err=True)
+        sys.exit(1)
+
+@config.command('get-region-url')
+@click.pass_context
+def test_get_region_url(ctx):
+    """test get_region_url."""
+    GetConfig(ctx).GetActiveConfig()
+    #Get Token
+    try:
+        region_url = GetRegionURL(
+                ctx.params["du_url"],
+                ctx.params["du_username"],
+                ctx.params["du_password"],
+                ctx.params["du_tenant"],
+                ctx.params["du_region"]
+                ).get_region_url()
+        if region_url is None:
+            msg = "Failed to obtain region url from: {} \
+                    for region: {}".format(ctx.param["du_url"], ctx.param["du_region"])
+            raise CLIException(msg)
+        print(region_url)
+
+    except (UserAuthFailure, CLIException) as e:
+        click.echo(e)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(e)
+        sys.exit(1)

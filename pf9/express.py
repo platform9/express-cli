@@ -1,5 +1,6 @@
 import click
 import os
+import sys 
 import json
 import requests
 import tarfile
@@ -8,8 +9,8 @@ import shutil
 from os.path import expanduser
 from .modules.util import Pf9ExpVersion
 
-from .config.commands import config
 from .cli.commands import version 
+from .config.commands import config
 from .cluster.commands import cluster 
 
 @click.group()
@@ -28,6 +29,10 @@ def cli(ctx):
     ctx.obj['pf9_exp_conf_dir'] = os.path.join(ctx.obj['pf9_exp_dir'], 'config/')
     ctx.obj['pf9_exp_ansible_runner'] = os.path.join(ctx.obj['pf9_exp_dir'],
                                                      'express', 'pf9-express')
+    ctx.obj['pf9_venv'] = sys.prefix 
+    ctx.obj['venv_activate'] = "{}/bin/activate".format(ctx.obj['pf9_venv'])
+    ctx.obj['venv_python'] = sys.executable 
+
 
 cli.add_command(version)
 cli.add_command(config)

@@ -1,7 +1,7 @@
 """
 Exceptions for Cluster Operations
 """
-from ..modules.exceptions import CLIException
+from ..exceptions import CLIException
 
 class ClusterCLIException(CLIException):
     def __init__(self, msg):
