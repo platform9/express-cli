@@ -8,7 +8,7 @@ class GetConfig(object):
     def __init__(self, ctx):
         self.ctx = ctx
 
-    def GetActiveConfig(self):
+    def get_active_config(self):
         # Load Active config into ctx
         config_file = os.path.join(self.ctx.obj['pf9_exp_conf_dir'], 'express.conf')
         if os.path.exists(config_file):
@@ -72,15 +72,15 @@ class Utils:
 
 
 class Pf9ExpVersion:
-    ''' Methods for managing PF9 Versions'''
+    """ Methods for managing PF9 Versions"""
     def get_local(self, path):
         try:
             with open(path, 'r') as value:
                 version = value.readline().strip()
             return version
-        except Exception as e:
+        except Exception:
             msg = "Failed reading {}: ".format(path)
-            raise CLIException(e)  
+            raise CLIException(msg)
 
     def get_release_json(self, release='latest'):
         req = requests.get('https://api.github.com/repos/platform9/express/releases/' + release)

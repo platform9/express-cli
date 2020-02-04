@@ -1,7 +1,6 @@
 import click
 from datetime import datetime
 import os
-from prettytable import PrettyTable
 import shlex
 from string import Template
 import subprocess
@@ -13,13 +12,14 @@ from .exceptions import PrepNodeFailed
 from .helpers import validate_ssh_details, get_local_node_addresses, check_vip_needed
 from ..modules.ostoken import GetToken
 from ..modules.util import GetConfig 
-from ..modules.util import Utils
 from .cluster_create import CreateCluster
 from .cluster_attach import AttachCluster
+
 
 def print_help_msg(command):
     with click.Context(command) as ctx:
         click.echo(command.get_help(ctx))
+
 
 def run_command(command, run_env=os.environ):
     try:
@@ -33,9 +33,9 @@ def run_command(command, run_env=os.environ):
 
 def run_express(ctx, inv_file, ips):
     # Build the pf9-express command to run
-    exp_ansible_runner = os.path.join(ctx.obj['pf9_exp_dir'], 'express', 'pf9-express')
-    exp_config_file = os.path.join(ctx.obj['pf9_exp_dir'], 'config', 'express.conf')
-    log_file = os.path.abspath(os.path.join(os.path.join(ctx.obj['pf9_exp_dir'], os.pardir), 'log', datetime.now().strftime('express_%Y_%m_%d-%H_%m_%S.log')))
+    exp_ansible_runner = ctx.obj['pf9_exp_ansible_runner']
+    exp_config_file = ctx.obj['exp_config_file']
+    log_file = os.path.join(ctx.obj['pf9_log_dir'], datetime.now().strftime('express_%Y_%m_%d-%H_%m_%S.log'))
     # Invoke PMK only related playbook.
     # Should this be defined directly in the inv file template? It could be a global setting
     # for CLI inventory files.
@@ -59,7 +59,7 @@ def run_express(ctx, inv_file, ips):
                                     stderr=subprocess.PIPE)
         elapsed = 0
         while cmd_proc.poll() is None:
-            elapsed =  elapsed + poll_interval_secs
+            elapsed = elapsed + poll_interval_secs
             if elapsed < (total_nodes * time_per_host_secs - poll_interval_secs):
                 bar.update(poll_interval_secs)
 
@@ -124,7 +124,7 @@ def build_express_inventory_file(ctx, user, password, ssh_key, ips,
     return inv_file_path
 
 def get_token_project(ctx):
-    GetConfig(ctx).GetActiveConfig()
+    GetConfig(ctx).get_active_config()
 
     # Get Token and Tenant ID (app pulling tenant_ID "project_id" into get_token)
     auth_obj = GetToken()

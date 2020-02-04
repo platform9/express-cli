@@ -9,7 +9,8 @@ from subprocess import PIPE, Popen as popen
 from unittest import TestCase
 from click.testing import CliRunner
 
-from pf9 import __version__ as VERSION
+from pf9 import __version__
+from pf9.express import cli
 from pf9.express import version as cli_version
 
 
@@ -24,8 +25,9 @@ class TestExpCliVersion(TestCase):
     """Test express --version call"""
     def test_returns_version_information(self):
         """Test express --version call"""
-        output = popen(['express', '--version'], stdout=PIPE).communicate()[0]
-        self.assertEqual(output.decode("utf-8").strip(), VERSION)
+        runner = CliRunner()
+        result = runner.invoke(cli, ['--version'])
+        assert str(__version__) in result.output
 # WIP
 class TestPf9ExpVersion(TestCase):
     """Test express-cli version functions"""

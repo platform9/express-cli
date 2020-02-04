@@ -10,7 +10,7 @@ import shutil
 from unittest import TestCase
 from click.testing import CliRunner
 
-from pf9.config.commands import list as cli_config_list
+from pf9.config.commands import config_list as cli_config_list
 from pf9.config.commands import create as cli_config_create
 
 
