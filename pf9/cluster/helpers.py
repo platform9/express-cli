@@ -1,6 +1,19 @@
-from .exceptions import SSHInfoMissing, MissingVIPDetails
-import netifaces
 import re
+import netifaces
+from .exceptions import SSHInfoMissing, MissingVIPDetails
+
+
+def build_express_run_command():
+    """Build Ansible-Playbook Command"""
+#     ansible-playbook -i /tmp/pf9_zlha37f3/exp-inventory \
+#             -l pmk \
+#             -e "skip_prereq=1 autoreg='on' \
+#             du_fqdn='cfe-tomchris.platform9.horse' \
+#             ctrl_ip='131.153.252.189' \
+#             du_username='tom.christopoulos@platform9.com' \
+#             du_password=''" \
+#             /pf9/pf9-express/express/pf9-k8s-express.yml \
+#             2>$1 | tee /home/tomchris/pf9/log/express_2020_02_04-17_02_31.log
 
 
 def validate_ssh_details(user, password, ssh_key):

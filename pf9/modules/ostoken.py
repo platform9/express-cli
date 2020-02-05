@@ -1,6 +1,5 @@
-#!/usr/bin/python
 """
-Classes for Authenticating and Interogating Platform9 Management Plane
+Classes for Authenticating and Interrogating Platform9 Management Plane
 Tested with python 2.7 and 3.7.0 on OSX and Ubuntu 16.04 and 18.04
 Maintainer: tom.christopoulos@platform9.com
 """
@@ -80,7 +79,7 @@ class GetToken:
         return token, project_id
 
 
-class GetRegionURL():
+class GetRegionURL:
     """GetRegionURL Returns FQDN of a public API service endpoint for a given Openstack Region"""
     def __init__(self, host, username, password, tenant, region):
         """Initialize GetRegionURL()"""

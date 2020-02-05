@@ -9,7 +9,7 @@ from ..exceptions import UserAuthFailure
 from ..modules.ostoken import GetToken
 from ..modules.ostoken import GetRegionURL
 from ..modules.util import Utils
-from ..modules.util import GetConfig
+from ..modules.express import Get
 
 
 @click.group()
@@ -87,7 +87,7 @@ def config_list(obj):
     if os.path.exists(pf9_exp_conf_dir):
         count = 1
         result = PrettyTable()
-        result.field_names = ["#","Active", "Conf", "Management Plane", "Region"]
+        result.field_names = ["#", "Active", "Conf", "Management Plane", "Region"]
         files = [f for f in os.listdir(pf9_exp_conf_dir) if os.path.isfile(os.path.join(pf9_exp_conf_dir, f))]
 
         for f in files:
@@ -95,11 +95,11 @@ def config_list(obj):
             if f == 'express.conf':
                 active = True
             with open(pf9_exp_conf_dir + f, 'r') as config_file:
-                _config = Utils().config_to_dict(config_file)
+                _config = Get.config_to_dict(config_file)
             if active:
-                result.add_row([count,'*', _config["name"], _config["du_url"], _config["os_region"]])
+                result.add_row([count, '*', _config["name"], _config["du_url"], _config["os_region"]])
             else:
-                result.add_row([count,' ', _config["name"], _config["du_url"], _config["os_region"]])
+                result.add_row([count, ' ', _config["name"], _config["du_url"], _config["os_region"]])
             count = count + 1
 
         click.echo(result)
@@ -148,41 +148,46 @@ def config_validate(ctx):
     """Validate active Platform9 management plane config."""
     # Validates pf9-express config file and obtains Auth Token
     # Load Active Config into ctx
-    GetConfig(ctx).get_active_config()
-    #Get Token
     try:
+        Get(ctx).active_config()
+        # Get Token
         token = GetToken().get_token_v3(
                 ctx.params["du_url"],
                 ctx.params["du_username"],
                 ctx.params["du_password"],
-                ctx.params["du_tenant"] )
+                ctx.params["du_tenant"])
         if token is None:
             msg = "Failed to obtain Authentication from: {}".format(ctx.params["du_url"])
             raise CLIException(msg)
         else:
             return token
     except (UserAuthFailure, CLIException) as e:
-        click.echo(e, err=True)
+        click.echo(e)
         sys.exit(1)
     except Exception as e:
         click.echo("Message: {}\n    type: {}".format(e, type(e)), err=True)
         sys.exit(1)
 
+
 @config.command('get-token')
+@click.option('--silent', is_flag=True)
 @click.pass_context
-def get_token(ctx, **kwargs):
-    """Validate active Platform9 management plane config."""
-    # Validates pf9-express config file and obtains Auth Token
-    #Load Active Config into ctx
-    GetConfig(ctx).get_active_config()
-    #Get Token
+def get_token(ctx, silent):
+    """Validate active Platform9 management plane config and obtains Auth Token"""
     try:
+        # Load Active Config into ctx
+        Get(ctx).active_config()
+        # Get Token
         token = GetToken().get_token_v3(
                 ctx.params["du_url"],
                 ctx.params["du_username"],
                 ctx.params["du_password"],
-                ctx.params["du_tenant"] )
+                ctx.params["du_tenant"])
         if token is not None:
+            if silent:
+                click.echo(token)
+                sys.exit(0)
+                
             click.echo("Management Plane: {}".format(ctx.params["du_url"]))
             click.echo("Username: {}".format(ctx.params["du_username"]))
             click.echo("Region: {}".format(ctx.params["du_region"]))
@@ -197,26 +202,18 @@ def get_token(ctx, **kwargs):
         click.echo("Message: {}\n    type: {}".format(e, type(e)), err=True)
         sys.exit(1)
 
+
 @config.command('get-region-url')
 @click.pass_context
 def test_get_region_url(ctx):
     """test get_region_url."""
-    GetConfig(ctx).get_active_config()
-    #Get Token
     try:
-        region_url = GetRegionURL(
-                ctx.params["du_url"],
-                ctx.params["du_username"],
-                ctx.params["du_password"],
-                ctx.params["du_tenant"],
-                ctx.params["du_region"]
-                ).get_region_url()
+        region_url = Get(ctx).region_fqdn()
         if region_url is None:
             msg = "Failed to obtain region url from: {} \
                     for region: {}".format(ctx.param["du_url"], ctx.param["du_region"])
             raise CLIException(msg)
-        print(region_url)
-
+        click.echo(region_url)
     except (UserAuthFailure, CLIException) as e:
         click.echo(e)
         sys.exit(1)

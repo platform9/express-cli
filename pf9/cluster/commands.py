@@ -1,4 +1,4 @@
-import click
+"""Express Cluster Commands"""
 from datetime import datetime
 import os
 import shlex
@@ -7,43 +7,47 @@ import subprocess
 import sys
 import tempfile
 import time
+import click
 from ..exceptions import CLIException
 from .exceptions import PrepNodeFailed
 from .helpers import validate_ssh_details, get_local_node_addresses, check_vip_needed
 from ..modules.ostoken import GetToken
-from ..modules.util import GetConfig 
+from ..modules.express import Get
 from .cluster_create import CreateCluster
 from .cluster_attach import AttachCluster
 
 
 def print_help_msg(command):
+    """Print Command's Help message"""
     with click.Context(command) as ctx:
         click.echo(command.get_help(ctx))
 
 
-def run_command(command, run_env=os.environ):
+def run_command(command, run_env=os.environ.copy()):
+    """Subprocess Call to Express"""
     try:
         out = subprocess.check_output(shlex.split(command), env=run_env)
         # Command was successful, return code must be 0 with relevant output
         return 0, out
-    except subprocess.CalledProcessError as e:
-        click.echo('%s command failed: %s', command, e)
-        return e.returncode, e.output
+    except subprocess.CalledProcessError as err:
+        click.echo("{} command failed: {}".format(command, err))
+        return err.returncode, err.output
 
 
 def run_express(ctx, inv_file, ips):
-    # Build the pf9-express command to run
+    """Build the bash command that will be sent to pf9-express"""
     exp_ansible_runner = ctx.obj['pf9_exp_ansible_runner']
     exp_config_file = ctx.obj['exp_config_file']
-    log_file = os.path.join(ctx.obj['pf9_log_dir'], datetime.now().strftime('express_%Y_%m_%d-%H_%m_%S.log'))
+    log_file = os.path.join(ctx.obj['pf9_log_dir'],
+                            datetime.now().strftime('express_%Y_%m_%d-%H_%m_%S.log'))
     # Invoke PMK only related playbook.
     # Should this be defined directly in the inv file template? It could be a global setting
     # for CLI inventory files.
-    #ansible_extra_vars = "\"ansible_python_interpreter={}\"".format(sys.executable)
+    # ansible_extra_vars = "\"ansible_python_interpreter={}\"".format(sys.executable)
+
     cmd = '{0} -a -b --pmk -v {1} -c {2} -l {3} pmk'.format(exp_ansible_runner,
-                                                                 inv_file, exp_config_file,
-                                                                 log_file)
-    # Current implementation is to have this express invocation dumps logs in 
+                                                            inv_file, exp_config_file, log_file)
+    # Current implementation is to have this express invocation dumps logs in
     # a known location instead of capturing it here. Here we care only about
     # the exit code and fake progress.
 
@@ -54,19 +58,19 @@ def run_express(ctx, inv_file, ips):
     total_nodes = len(ips)
     poll_interval_secs = 5
     with click.progressbar(length=total_nodes * time_per_host_secs, color="orange",
-                           label='Preparing nodes') as bar:
+                           label='Preparing nodes') as progbar:
         cmd_proc = subprocess.Popen(shlex.split(cmd), env=os.environ, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
         elapsed = 0
         while cmd_proc.poll() is None:
             elapsed = elapsed + poll_interval_secs
             if elapsed < (total_nodes * time_per_host_secs - poll_interval_secs):
-                bar.update(poll_interval_secs)
+                progbar.update(poll_interval_secs)
 
             time.sleep(poll_interval_secs)
 
         # Success or failure... push the progress to 100%
-        bar.update(total_nodes * time_per_host_secs)
+        progbar.update(total_nodes * time_per_host_secs)
 
     if cmd_proc.returncode:
         msg = "Code: {}, output log: {}".format(cmd_proc.returncode, log_file)
@@ -76,7 +80,7 @@ def run_express(ctx, inv_file, ips):
 
 
 # NOTE: a utils file may be a better location for these helper methods
-def build_express_inventory_file(ctx, user, password, ssh_key, ips,
+def build_express_inventory_file(user, password, ssh_key, ips,
                                  only_local_node=False, node_prep_only=False):
     inv_file_path = None
     inv_tpl_contents = None
@@ -96,19 +100,21 @@ def build_express_inventory_file(ctx, user, password, ssh_key, ips,
 
         if only_local_node:
 
-            node_details = 'localhost ansible_python_interpreter=sys.executable ansible_connection=local ansible_host=localhost\n'
+            node_details = 'localhost ansible_python_interpreter=sys.executable ' \
+                           'ansible_connection=local ansible_host=localhost\n'
         else:
             # Build the great inventory file
             for ip in ips:
                 if ip == 'localhost':
-                    node_info = 'localhost ansible_python_interpreter=sys.executable ansible_connection=local ansible_host=localhost\n'
+                    node_info = 'localhost ansible_python_interpreter=sys.executable ' \
+                                'ansible_connection=local ansible_host=localhost\n'
                 else:
                     if password:
-                        node_info = "{0} ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_user={1} ansible_ssh_pass={2}\n".format(
-                                     ip, user, password)
+                        node_info = "{0} ansible_ssh_common_args='-o StrictHostKeyChecking=no' " \
+                                    "ansible_user={1} ansible_ssh_pass={2}\n".format(ip, user, password)
                     else:
-                        node_info = "{0} ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_user={1} ansible_ssh_private_key_file={2}\n".format(
-                                     ip, user, ssh_key)
+                        node_info = "{0} ansible_ssh_common_args='-o StrictHostKeyChecking=no' " \
+                                    "ansible_user={1} ansible_ssh_private_key_file={2}\n".format(ip, user, ssh_key)
                 node_details = "".join((node_details, node_info))
 
         inv_template = Template(inv_tpl_contents)
@@ -123,8 +129,9 @@ def build_express_inventory_file(ctx, user, password, ssh_key, ips,
 
     return inv_file_path
 
+
 def get_token_project(ctx):
-    GetConfig(ctx).get_active_config()
+    Get(ctx).active_config()
 
     # Get Token and Tenant ID (app pulling tenant_ID "project_id" into get_token)
     auth_obj = GetToken()
@@ -136,13 +143,13 @@ def get_token_project(ctx):
 
     return token, project_id
 
+
 def create_cluster(ctx):
-    
     # create cluster
     click.echo("Creating Cluster: {}".format(ctx.params['cluster_name']))
     cluster_status, cluster_uuid = CreateCluster(ctx).cluster_exists()
 
-    if cluster_status == True:
+    if cluster_status:
         click.echo("Cluster {} already exists".format(ctx.params['cluster_name']))
     else:
         CreateCluster(ctx).create_cluster()
@@ -160,7 +167,7 @@ def attach_cluster(cluster_name, master_ips, worker_ips, ctx):
     click.echo("Attaching to cluster {}".format(cluster_name))
     status, cluster_uuid = cluster_attacher.cluster_exists(cluster_name)
 
-    if status == False:
+    if status:
         click.secho("Cluster {} doesn't exist. Provide name of an existing cluster".format(
                     ctx.params['cluster_name']), fg="red")
         sys.exit(1)
@@ -207,9 +214,11 @@ def prep_node(ctx, user, password, ssh_key, ips, node_prep_only):
 
     return rcode, output_file
 
+
 @click.group()
 def cluster():
-    """Platform9 Managed Kuberenetes cluster operations. Read more at http://pf9.io/cli_clhelp."""
+    """Platform9 Managed Kubernetes cluster operations. Read more at http://pf9.io/cli_clhelp."""
+
 
 @cluster.command('create')
 @click.argument('cluster_name')
@@ -260,7 +269,7 @@ def create(ctx, **kwargs):
                     adj_ips = adj_ips + ("localhost",)
                 else:
                     # check if ssh creds are provided.
-                    validate_ssh_details(ctx.params['user'], 
+                    validate_ssh_details(ctx.params['user'],
                                          ctx.params['password'],
                                          ctx.params['ssh_key'])
                     adj_ips = adj_ips + (ip,)
@@ -275,7 +284,7 @@ def create(ctx, **kwargs):
 
         if len(all_ips) > 0:
             # To attach nodes, we have to find the node uuid from the DU based on
-            # the IP address. This cannot be localhost, 127.0.0.1. We handle it by 
+            # the IP address. This cannot be localhost, 127.0.0.1. We handle it by
             # getting all the non local IPs and picking the first one.
             # Attach nodes
             master_ips = ()
@@ -412,7 +421,8 @@ def prepnode(ctx, user, password, ssh_key, ips):
     Prepare a node to be ready to be added to a Kubernetes cluster. Read more at http://pf9.io/cli_clprep.
     """
     if not ips:
-        prompt_msg = "No IPs provided. Proceed with preparing the current node to be added to a Kubernetes cluster [y/n]?"
+        prompt_msg = "No IPs provided. " \
+                     "Proceed with preparing the current node to be added to a Kubernetes cluster [y/n]?"
 
         localnode_confirm = click.prompt(prompt_msg, default = 'y')
         if localnode_confirm.lower() == 'n':
@@ -426,8 +436,7 @@ def prepnode(ctx, user, password, ssh_key, ips):
     adj_ips = ()
     try:
         for ip in parse_ips:
-            if ip == "127.0.0.1" or ip == "localhost" \
-                or ip in get_local_node_addresses():
+            if ip == "127.0.0.1" or ip == "localhost" or ip in get_local_node_addresses():
                 adj_ips = adj_ips + ("localhost",)
             else:
                 # check if ssh creds are provided.
@@ -449,4 +458,3 @@ def prepnode(ctx, user, password, ssh_key, ips):
 
     click.secho("Preparing the provided nodes to be added to Kubernetes cluster was successful",
                 fg="green")
-

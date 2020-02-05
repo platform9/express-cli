@@ -35,6 +35,8 @@ def cli(ctx):
     ctx.obj['exp_config_file'] = os.path.join(ctx.obj['pf9_exp_conf_dir'], 'express.conf')
     ctx.obj['pf9_exp_ansible_runner'] = os.path.join(ctx.obj['pf9_exp_dir'],
                                                      'express', 'pf9-express')
+    ctx.obj['pf9_ansible-playbook'] = os.path.join(ctx.obj['pf9_venv'],
+                                                     'bin', 'ansible-playbook')
 
 # Add top-level commands to cli.
 # Any commands defined here or added will be toplevel
@@ -95,7 +97,7 @@ def upgrade(obj):
 
     ver = Pf9ExpVersion()
     click.echo(ver.get_release_json())
-
+    # TODO: upgrade fails if there is no version file.
     r = requests.get('https://api.github.com/repos/platform9/express/releases/latest')
     response = r.json()
     url = response['tarball_url']
@@ -125,17 +127,17 @@ def upgrade(obj):
             with open(target_path, 'wb') as f:
                 f.write(response.raw.read())
 
+        os.rename(pf9_exp_dir + 'express', pf9_exp_dir + 'express-bak')
+
         tar = tarfile.open(target_path, "r:gz")
         tar.extractall(pf9_exp_dir)
         tar.close()
-
-        os.rename(pf9_exp_dir + 'express', pf9_exp_dir + 'express-bak')
 
         for sub_dir in next(os.walk(pf9_exp_dir))[1]:
             if 'platform9-express-' in sub_dir:
                 os.rename(pf9_exp_dir + sub_dir, pf9_exp_dir + 'express')
 
-        shutil.rmtree(pf9_exp_dir + 'express-bak')
+        #shutil.rmtree(pf9_exp_dir + 'express-bak')
 
         with open(pf9_exp_dir + 'version', 'w') as file:
             file.write(new_version + '\n')
