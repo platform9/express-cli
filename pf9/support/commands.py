@@ -1,13 +1,18 @@
 """CLI Support Commands """
+import os
 import sys
 import click
 import requests
 import urllib3
+import getpass
+import socket
 from ..exceptions import DUCommFailure
 from ..exceptions import CLIException
 from ..modules.express import Get
 from ..modules.util import Utils
+from fabric import Connection
 import ipaddress
+import paramiko.ssh_exception
 
 
 @click.group()
@@ -35,9 +40,42 @@ def create(ctx, silent, host, off_line):
                 click.echo("Quiting...")
                 sys.exit(1)
             host = "127.0.0.1"
+            fqdn = socket.gethostname()
+            click.echo("host_fqdn: " + fqdn)
 
         click.echo("Directly requesting support bundle generation from \n"
                    "host: {}".format(host))
+        ssh_dir = os.path.join(os.path.expanduser("~"), '.ssh/')
+        user_name = getpass.getuser()
+        ssh_conn = Connection(host=host, user=user_name, port=22)
+        try:
+            ssh_result = ssh_conn.run('uname -s')
+        except (paramiko.ssh_exception.SSHException, paramiko.ssh_exception.PasswordRequiredException):
+            # Need to loop this whole process up to 3 times.
+            click.echo("SSH Credentials for {}".format(host))
+            user_name = click.prompt("Username {}".format(user_name), default=user_name)
+            use_ssh_key = click.prompt("Use SSH Key Auth? [y/n]", default='y')
+            if use_ssh_key.lower() == 'y':
+                ssh_key_file = click.prompt("SSH private key file: {}".format(ssh_dir), default=ssh_dir)
+                ssh_auth = {"look_for_keys": "false", "key_filename": ssh_key_file}
+            else:
+                password = getpass.unix_getpass()
+                ssh_auth = {"look_for_keys": "false", "password": password}
+            # Need to loop getting the keyfile against file exist
+            ssh_conn = Connection(
+                host=host,
+                user=user_name,
+                port=22,
+                connect_kwargs=ssh_auth,
+            )
+        try:
+            ssh_result = ssh_conn.run('uname -s')
+        except (paramiko.ssh_exception.SSHException, paramiko.ssh_exception.PasswordRequiredException) as except_err:
+            click.echo("FAILED: {}".format(except_err))
+            sys.exit(1)
+        click.echo("Result: {}".format(ssh_result))
+        # TEMP EXIT
+        sys.exit(0)
 
     if not host:
         except_msg = "No host provided."
