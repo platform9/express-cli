@@ -4,6 +4,8 @@ import re
 import requests
 import os
 import click
+import socket
+
 
 class GetConfig(object):
     def __init__(self, ctx):
@@ -30,6 +32,11 @@ class GetConfig(object):
 
 
 class Utils:
+    """Resolve IP of an FQDN and return IP as a string"""
+    @staticmethod
+    def ip_from_dns_name(fqdn):
+        return str(socket.gethostbyname_ex(fqdn)[2][0])
+
     def config_to_dict(self, config_file):
         config = {}
         for line in config_file:

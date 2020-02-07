@@ -9,7 +9,8 @@ from os.path import expanduser
 from .modules.util import Pf9ExpVersion
 
 from .config.commands import config
-from .cli.commands import version 
+from .support.commands import support
+from .cli.commands import version
 from .cluster.commands import cluster 
 
 @click.group()
@@ -29,8 +30,10 @@ def cli(ctx):
     ctx.obj['pf9_exp_ansible_runner'] = os.path.join(ctx.obj['pf9_exp_dir'],
                                                      'express', 'pf9-express')
 
+
 cli.add_command(version)
 cli.add_command(config)
+cli.add_command(support)
 cli.add_command(cluster)
 
 
