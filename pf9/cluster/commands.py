@@ -43,7 +43,7 @@ def run_express(ctx, inv_file, ips):
     # Invoke PMK only related playbook.
     # Should this be defined directly in the inv file template? It could be a global setting
     # for CLI inventory files.
-    # ansible_extra_vars = "\"ansible_python_interpreter={}\"".format(sys.executable)
+    ansible_extra_vars = "\"ansible_python_interpreter={}\"".format(sys.executable)
     # THIS COMMAND WORKS -- -os_auth_token being included here: 
     # ansible-playbook -vvv -i /tmp/pf9_zlha37f3/exp-inventory -l pmk -e "skip_prereq=1 autoreg='on' du_fqdn='cfe-tomchris.platform9.horse' ctrl_ip='131.153.252.189' du_username='tom.christopoulos@platform9.com' du_password=<REDACTED> os_auth_token='gAAAAABeOvs3gIZ81rEAjIqSJBm5hk_kKlKbOkcTLbS6XAii1e1z8-fCgmA1T00nB_LoiRlpWJl8cb8zaHd74wUQ5H7ZjgbF8jhh8LI1Ey9VfckjZnz40a0CPOiDbFSQKceAzsECevhv0TG5LIdoVb0fMWYGuxMEGdbdU4nZA51bULbPOfAMOww'" ~/pf9/pf9-express/express/pf9-k8s-express.yml | tee /home/tomchris/pf9/log/express_debug.log
     #     Inventory for above:
@@ -124,7 +124,6 @@ def build_express_inventory_file(user, password, ssh_key, ips,
         file_data = inv_template.safe_substitute(node_details=node_details)
         with open(inv_file_path, 'w') as inv_file:
             inv_file.write(file_data)
-        click.echo("Inventory:\n{}".format(file_data))
     else:
         # Build inventory file in specific dir hierarchy
         # TODO: to be implemented
@@ -211,7 +210,7 @@ def prep_node(ctx, user, password, ssh_key, ips, node_prep_only):
         only_local_node = True
         click.echo('Preparing the local node to be added to Platform9 Managed Kubernetes')
 
-    inv_file = build_express_inventory_file(ctx, user, password, ssh_key, ips,
+    inv_file = build_express_inventory_file(user, password, ssh_key, ips,
                                             only_local_node, node_prep_only)
     rcode, output_file = run_express(ctx, inv_file, ips)
 

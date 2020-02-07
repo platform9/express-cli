@@ -2,6 +2,7 @@
 
 import sys
 import os
+from codecs import open
 from subprocess import call
 
 from setuptools import Command, find_packages, setup
