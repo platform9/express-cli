@@ -44,7 +44,10 @@ def run_express(ctx, inv_file, ips):
     # Should this be defined directly in the inv file template? It could be a global setting
     # for CLI inventory files.
     # ansible_extra_vars = "\"ansible_python_interpreter={}\"".format(sys.executable)
-
+    # THIS COMMAND WORKS -- -os_auth_token being included here: 
+    # ansible-playbook -vvv -i /tmp/pf9_zlha37f3/exp-inventory -l pmk -e "skip_prereq=1 autoreg='on' du_fqdn='cfe-tomchris.platform9.horse' ctrl_ip='131.153.252.189' du_username='tom.christopoulos@platform9.com' du_password=<REDACTED> os_auth_token='gAAAAABeOvs3gIZ81rEAjIqSJBm5hk_kKlKbOkcTLbS6XAii1e1z8-fCgmA1T00nB_LoiRlpWJl8cb8zaHd74wUQ5H7ZjgbF8jhh8LI1Ey9VfckjZnz40a0CPOiDbFSQKceAzsECevhv0TG5LIdoVb0fMWYGuxMEGdbdU4nZA51bULbPOfAMOww'" ~/pf9/pf9-express/express/pf9-k8s-express.yml | tee /home/tomchris/pf9/log/express_debug.log
+    #     Inventory for above:
+    #     172.31.19.159 ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_user=tomchris ansible_ssh_private_key_file=~/.ssh/tom-pf9
     cmd = '{0} -a -b --pmk -v {1} -c {2} -l {3} pmk'.format(exp_ansible_runner,
                                                             inv_file, exp_config_file, log_file)
     # Current implementation is to have this express invocation dumps logs in

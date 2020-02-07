@@ -5,9 +5,10 @@ import socket
 
 
 class Utils:
+    """Resolve IP of an FQDN and return IP as a string"""
     @staticmethod
     def ip_from_dns_name(fqdn):
-        return socket.gethostbyname_ex(fqdn)[2][0]
+        return str(socket.gethostbyname_ex(fqdn)[2][0])
 
 
 class Pf9ExpVersion:

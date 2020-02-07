@@ -11,6 +11,7 @@ from .modules.util import Pf9ExpVersion
 
 from .cli.commands import version
 from .config.commands import config
+from .support.commands import support
 from .cluster.commands import cluster
 
 
@@ -42,6 +43,7 @@ def cli(ctx):
 # Any commands defined here or added will be toplevel
 cli.add_command(version)
 cli.add_command(config)
+cli.add_command(support)
 cli.add_command(cluster)
 
 
@@ -137,7 +139,7 @@ def upgrade(obj):
             if 'platform9-express-' in sub_dir:
                 os.rename(pf9_exp_dir + sub_dir, pf9_exp_dir + 'express')
 
-        #shutil.rmtree(pf9_exp_dir + 'express-bak')
+        shutil.rmtree(pf9_exp_dir + 'express-bak')
 
         with open(pf9_exp_dir + 'version', 'w') as file:
             file.write(new_version + '\n')

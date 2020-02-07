@@ -7,13 +7,53 @@ Express can be found @ https://github.com/platform9/express.git
 
 import os
 from ..exceptions import CLIException
+from ..exceptions import UserAuthFailure
 from .ostoken import GetRegionURL
+from .ostoken import GetToken
 
 
 class Get:
     """Express.Get(ctx) contains method to "GET" data required to run express"""
     def __init__(self, ctx):
         self.ctx = ctx
+        
+    def get_token_project(self):
+        """Calls ostoken.GetToken().get_token_project() using active config
+                return token, project_id
+        """
+        try:
+            self.active_config()
+            token_project = GetToken().get_token_project(
+                self.ctx.params["du_url"],
+                self.ctx.params["du_username"],
+                self.ctx.params["du_password"],
+                self.ctx.params["du_tenant"])
+            if not token_project:
+                except_err = "Failed to obtain an Authentication Token from: {}".format(self.ctx.params["du_url"])
+                raise CLIException(except_err)
+            return token_project
+        except UserAuthFailure:
+            raise
+        except CLIException as except_err:
+            raise except_err
+        
+    def get_token(self):
+        """Calls ostoken.GetToken.get_token_v3 using active config"""
+        try:
+            self.active_config()
+            token = GetToken().get_token_v3(
+                self.ctx.params["du_url"],
+                self.ctx.params["du_username"],
+                self.ctx.params["du_password"],
+                self.ctx.params["du_tenant"])
+            if not token:
+                except_err = "Failed to obtain an Authentication Token from: {}".format(self.ctx.params["du_url"])
+                raise CLIException(except_err)
+            return token
+        except UserAuthFailure:
+            raise
+        except CLIException as except_err:
+            raise except_err
 
     def region_fqdn(self):
         """Calls ostoken.GetRegionURL().get_region_url."""

@@ -7,8 +7,6 @@ from prettytable import PrettyTable
 from ..exceptions import CLIException
 from ..exceptions import UserAuthFailure
 from ..modules.ostoken import GetToken
-from ..modules.ostoken import GetRegionURL
-from ..modules.util import Utils
 from ..modules.express import Get
 
 
@@ -113,31 +111,28 @@ def config_list(obj):
 @click.pass_obj
 def activate(obj, config_name):
     """Activate Platform9 management plane config."""
-    
-    click.echo("Activating config {}".format(config_name))
-    click.echo("    config: {}".format(config_name))
-    click.echo("    type: {}".format(type(config_name)))
-    exp_conf_path = obj['pf9_exp_conf_dir'] + 'express.conf'
-    click.echo("Get current express.conf")
-    if os.path.exists(exp_conf_path):
-        with open(exp_conf_path, 'r') as exp_conf_read:
-            exp_conf= exp_conf_read.readline()
-            exp_conf_read.close()
-        click.echo("config.activate:\n    exp_conf: {}".format(exp_conf))
-        for line in exp_conf:
-            click.echo("    line: {}".format(line))
+    # activates pf9-express config file
+    click.echo("Activating config %s" % config)
+    exp_conf_dir = obj['pf9_exp_conf_dir']
+    exp_conf_file = obj['pf9_exp_conf_dir'] + 'express.conf'
+
+    if os.path.exists(exp_conf_file):
+        with open(exp_conf_file, 'r') as current:
+            lines = current.readlines()
+            current.close()
+        for line in lines:
             if 'config_name|' in line:
                 line = line.strip()
-                name = line.replace('config_name|','')
+                name = line.replace('config_name|', '')
 
         filename = name + '.conf'
-        shutil.move(exp_conf_path + 'express.conf', exp_conf_path + filename)
+        shutil.move(exp_conf_file, exp_conf_dir + filename)
 
-    files = [f for f in os.listdir(exp_conf_path) if os.path.isfile(os.path.join(exp_conf_path, f))]
+    files = [f for f in os.listdir(exp_conf_dir) if os.path.isfile(os.path.join(exp_conf_dir, f))]
 
     for f in files:
         if f == (config_name + '.conf'):
-            shutil.move(exp_conf_path + f, exp_conf_path + 'express.conf')
+            shutil.move(exp_conf_dir + f, exp_conf_file)
 
     click.echo('Config %s is now active' % config_name)
 
@@ -145,10 +140,19 @@ def activate(obj, config_name):
 @config.command('validate')
 @click.pass_context
 def config_validate(ctx):
-    """Validate active Platform9 management plane config."""
-    # Validates pf9-express config file and obtains Auth Token
-    # Load Active Config into ctx
+    """Validates the active config against the Platform9 Management Plane.
+
+    \b
+    Success:
+        stdout: silent
+        rc:     0
+    \b
+    Failure:
+        stdout: Error message
+        rc:     1
+    """
     try:
+        # Load Active Config into ctx
         Get(ctx).active_config()
         # Get Token
         token = GetToken().get_token_v3(
@@ -170,10 +174,10 @@ def config_validate(ctx):
 
 
 @config.command('get-token')
-@click.option('--silent', is_flag=True)
+@click.option('--silent', '-s', is_flag=True, help='Return only the token. Helpful when utilized in scripts.')
 @click.pass_context
 def get_token(ctx, silent):
-    """Validate active Platform9 management plane config and obtains Auth Token"""
+    """Returns an Auth Token for the active config from the Platform9 Management Plane"""
     try:
         # Load Active Config into ctx
         Get(ctx).active_config()
@@ -203,10 +207,14 @@ def get_token(ctx, silent):
         sys.exit(1)
 
 
-@config.command('get-region-url')
+@config.command('get-region-fqdn')
 @click.pass_context
 def test_get_region_url(ctx):
-    """test get_region_url."""
+    """Returns the FQDN of the public service api endpoint
+    on the Platform9 Management Plane for the region specified in the current active config
+    """
+    # Add returning the token and IP Address
+    # include usage examples in the doc
     try:
         region_url = Get(ctx).region_fqdn()
         if region_url is None:
