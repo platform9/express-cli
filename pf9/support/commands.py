@@ -48,15 +48,19 @@ def create(ctx, silent, host, off_line):
         ssh_dir = os.path.join(os.path.expanduser("~"), '.ssh/')
         user_name = getpass.getuser()
         ssh_conn = Connection(host=host, user=user_name, port=22)
+        local_bundle_exec = 'sudo python /opt/pf9/hostagent/lib/python2.7/site-packages/datagatherer/datagatherer.py'
         try:
-            ssh_result = ssh_conn.run('uname -s')
-        except (paramiko.ssh_exception.SSHException, paramiko.ssh_exception.PasswordRequiredException):
+            ssh_result = ssh_conn.run(local_bundle_exec, pty=True)
+        except paramiko.ssh_exception.NoValidConnectionsError:
+            click.echo("Unable to communicate with: " + host)
+            sys.exit(1)
+        except (paramiko.ssh_exception.SSHException, paramiko.ssh_exception.PasswordRequiredException) as err:
             # Need to loop this whole process up to 3 times.
             click.echo("SSH Credentials for {}".format(host))
             user_name = click.prompt("Username {}".format(user_name), default=user_name)
             use_ssh_key = click.prompt("Use SSH Key Auth? [y/n]", default='y')
             if use_ssh_key.lower() == 'y':
-                ssh_key_file = click.prompt("SSH private key file: {}".format(ssh_dir), default=ssh_dir)
+                ssh_key_file = click.prompt("SSH private key file: ", default=ssh_dir)
                 ssh_auth = {"look_for_keys": "false", "key_filename": ssh_key_file}
             else:
                 password = getpass.unix_getpass()
@@ -68,8 +72,9 @@ def create(ctx, silent, host, off_line):
                 port=22,
                 connect_kwargs=ssh_auth,
             )
+        local_bundle_exec = 'sudo python /opt/pf9/hostagent/lib/python2.7/site-packages/datagatherer/datagatherer.py'
         try:
-            ssh_result = ssh_conn.run('uname -s')
+            ssh_result = ssh_conn.run(local_bundle_exec, pty=True)
         except (paramiko.ssh_exception.SSHException, paramiko.ssh_exception.PasswordRequiredException) as except_err:
             click.echo("FAILED: {}".format(except_err))
             sys.exit(1)
