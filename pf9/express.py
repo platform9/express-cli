@@ -59,8 +59,9 @@ def init(obj):
 
     if not os.path.exists(pf9_exp_dir):
         get_exp_ver = Pf9ExpVersion()
-        current_express_ver = get_exp_ver.get_release_json()['version']
-        url = current_express_ver['url_tar']
+        latest_express_ver_json = get_exp_ver.get_release_json()
+        current_express_ver = latest_express_ver_json['version']
+        url = latest_express_ver_json['url_tar']
 
         if not os.path.exists(pf9_dir):
             try:
