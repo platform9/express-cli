@@ -12,6 +12,36 @@ from .ostoken import GetRegionURL
 from .ostoken import GetToken
 
 
+class ResMgr:
+    """express.ResMgr(ctx) contains methods to interact with Platform9 Reservation Manager"""
+    def __init__(self, region_url, token):
+        self.region_url = region_url 
+        self.token = token
+
+    def get_hosts(self):
+        """express.ResMgr().get_resmgr_hosts
+        Calls Platform9 Reservation Manager using active config
+        retrieves all hosts associated with the region. (Responding, Not Responding, Not Authorized)
+                return resmgr_hosts_json
+        """
+        return_msg = ("--- Not Implemented ---"
+              "Move just  call from support bundle here")
+        print(return_msg)
+        return return_msg
+        # resmgr_bundle_resp = requests.post("{}{}/support/bundle".
+        #                                   format(_resmgr_endpoint,
+        #                                          host_values['id']
+        #                                          ), verify=False, headers=headers)
+
+    def request_support_bundle(self,host_id):
+        """express.ResMgr().request_support_bundle(host_id)"""
+        return_msg = ("--- Not Implemented ---"
+                      "Move call from support bundle create"
+                      "takes in ")
+        print(return_msg)
+        return return_msg
+
+
 class Get:
     """Express.Get(ctx) contains method to "GET" data required to run express"""
     def __init__(self, ctx):
@@ -38,7 +68,9 @@ class Get:
             raise except_err
         
     def get_token(self):
-        """Calls ostoken.GetToken.get_token_v3 using active config"""
+        """Calls ostoken.GetToken.get_token_v3 using active config
+                return token
+        """
         try:
             self.active_config()
             token = GetToken().get_token_v3(
@@ -56,7 +88,10 @@ class Get:
             raise except_err
 
     def region_fqdn(self):
-        """Calls ostoken.GetRegionURL().get_region_url."""
+        """Calls ostoken.GetRegionURL().get_region_url.
+                return region_fqdn
+        """
+
         try:
             self.active_config()
             region_url = GetRegionURL(
@@ -74,7 +109,15 @@ class Get:
             raise
 
     def active_config(self):
-        """Load Active config into ctx"""
+        """Load Active config into ctx
+            return
+                   ctx.params['du_url']
+                   ctx.params['du_username']
+                   ctx.params['du_password']
+                   ctx.params['du_tenant']
+                   ctx.params['du_region']
+            return does not need to be captured if context is available
+        """
         config_file = os.path.join(self.ctx.obj['pf9_exp_conf_dir'], 'express.conf')
         if os.path.exists(config_file):
             try:
@@ -97,7 +140,9 @@ class Get:
 
     @staticmethod
     def config_to_dict(config_file):
-        """Convert Pipe Seperated Config File to Dict()"""
+        """Convert Pipe separated config to Dict()
+                return config
+        """
         config = {}
         for line in config_file:
             if 'config_name|' in line:

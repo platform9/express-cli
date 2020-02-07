@@ -32,6 +32,7 @@ def cli(ctx):
     ctx.obj['pf9_log_dir'] = os.path.join(ctx.obj['pf9_dir'], 'log')
     ctx.obj['pf9_db_dir'] = os.path.join(ctx.obj['pf9_dir'], 'db')
     ctx.obj['pf9_exp_dir'] = os.path.join(ctx.obj['pf9_dir'], 'pf9-express/')
+    ctx.obj['pf9_express_log_dir'] = os.path.join(ctx.obj['pf9_exp_dir'], 'log')
     ctx.obj['pf9_exp_conf_dir'] = os.path.join(ctx.obj['pf9_exp_dir'], 'config/')
     ctx.obj['exp_config_file'] = os.path.join(ctx.obj['pf9_exp_conf_dir'], 'express.conf')
     ctx.obj['pf9_exp_ansible_runner'] = os.path.join(ctx.obj['pf9_exp_dir'],
