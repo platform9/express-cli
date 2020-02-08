@@ -27,16 +27,16 @@ class RunTests(Command):
 
 
 setup(
-    name = 'express-cli',
-    version = __version__,
-    description = 'Express CLI.',
-    long_description = open('README.md').read(),
-    long_description_content_type = 'text/markdown',
-    url = 'https://github.com/platform9/express-cli',
-    author = 'Jeremy Brooks',
-    author_email = 'jeremy@platform9.com',
-    license = 'Apache 2.0',
-    classifiers = [
+    name='express-cli',
+    version=__version__,
+    description='Express CLI.',
+    long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
+    url='https://github.com/platform9/express-cli',
+    author='Jeremy Brooks',
+    author_email='jeremy@platform9.com',
+    license='Apache 2.0',
+    classifiers=[
         'Intended Audience :: System Administrators',
         'Intended Audience :: End Users/Desktop',
         'Intended Audience :: Developers',
@@ -52,21 +52,30 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
     ],
-    package_data = {
+    package_data={
         'pf9':['templates/*',],
     },
     include_package_data=True,
     zip_safe=False,
-    keywords = 'cli',
-    packages = find_packages(exclude=['docs', 'tests*']),
-    install_requires = ['click', 'prettytable', 'requests', 'netifaces', 'colorama'],
-    extras_require = {
+    keywords='cli',
+    packages=find_packages(exclude=['docs', 'tests*']),
+    install_requires=['click',
+                      'prettytable',
+                      'requests',
+                      'netifaces',
+                      'colorama',
+                      'urllib3',
+                      'paramiko',
+                      'fabric',
+                      'invoke'
+                      ],
+    extras_require={
         'test': ['coverage', 'pytest', 'pytest-cov', 'mock'],
     },
-    entry_points = {
+    entry_points={
         'console_scripts': [
             'express=pf9.express:cli',
         ],
     },
-    cmdclass = {'test': RunTests},
+    cmdclass={'test': RunTests},
 )
