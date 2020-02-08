@@ -5,15 +5,17 @@ import click
 import requests
 import urllib3
 import getpass
-import socket
+import shlex
+import subprocess
 from ..exceptions import DUCommFailure
 from ..exceptions import CLIException
 from ..modules.express import Get
 from ..modules.util import Utils
-from fabric import Connection
+from fabric import Connection, Config
 import ipaddress
 import paramiko.ssh_exception
-
+import socket
+import invoke.exceptions
 
 @click.group()
 def support():
@@ -28,68 +30,89 @@ def bundle():
 @bundle.command('')
 @click.option('--host', help='Host for which you want a support bundle generated')
 @click.option('--silent', '-s', is_flag=True, help='Run silently, Helpful when utilized in scripts.')
-@click.option('--off-line', '-o', is_flag=True, help='Direct to host request to generate a support bundle.')
+@click.option('--mgmt-plane', '-m', is_flag=True, help='Direct to host request to generate a support bundle.')
+@click.option('--offline', '-o', is_flag=True, help='Direct to host request to generate a support bundle.')
 @click.pass_context
-def create(ctx, silent, host, off_line):
+def create(ctx, silent, host, offline, mgmt_plane):
     """Request Creation of a Platform9 Support"""
+    if offline and mgmt_plane:
+        click.echo("--mgmt-plane and --offline are not mutually exclusive.\n"
+                   "Only one may be set")
+        click.echo("\n\n" + click.Context(create).get_help())
 
-    if off_line:
-        if not host or host in ['localhost', '127.0.0.1']:
-            use_localhost = click.prompt("Use localhost? [y/n]", default='y')
-            if use_localhost.lower() == 'n':
-                click.echo("Quiting...")
+    if not mgmt_plane or offline:
+        offline = True
+
+    use_localhost = False
+    bundle_exec = 'python /opt/pf9/hostagent/lib/python2.7/site-packages/datagatherer/datagatherer.py'
+    if not host or host in ['localhost', '127.0.0.1']:
+        use_localhost = click.prompt("Use localhost? [y/n]", default='y')
+        if use_localhost.lower() == 'y':
+            host = socket.getfqdn()
+        else:
+            if not host:
+                click.echo("A host is required when not using localhost")
                 sys.exit(1)
-            host = "127.0.0.1"
-            fqdn = socket.gethostname()
-            click.echo("host_fqdn: " + fqdn)
+            else:
+                use_localhost = False
 
-        click.echo("Directly requesting support bundle generation from \n"
-                   "host: {}".format(host))
+    if offline:
+        if use_localhost:
+            try:
+                out = subprocess.check_output(shlex.split(bundle_exec))
+                click.echo(out)
+                return 0, out
+            except subprocess.CalledProcessError as except_err:
+                click.echo("Support Bundle Creation Failed: " + except_err)
+                # return e.returncode, e.output
+
+        click.echo("Requesting support bundle generation directly from host: {}".format(host))
         ssh_dir = os.path.join(os.path.expanduser("~"), '.ssh/')
         user_name = getpass.getuser()
-        ssh_conn = Connection(host=host, user=user_name, port=22)
-        local_bundle_exec = 'sudo python /opt/pf9/hostagent/lib/python2.7/site-packages/datagatherer/datagatherer.py'
-        try:
-            ssh_result = ssh_conn.run(local_bundle_exec, pty=True)
-        except paramiko.ssh_exception.NoValidConnectionsError:
-            click.echo("Unable to communicate with: " + host)
-            sys.exit(1)
-        except (paramiko.ssh_exception.SSHException, paramiko.ssh_exception.PasswordRequiredException) as err:
-            # Need to loop this whole process up to 3 times.
-            click.echo("SSH Credentials for {}".format(host))
-            user_name = click.prompt("Username {}".format(user_name), default=user_name)
-            use_ssh_key = click.prompt("Use SSH Key Auth? [y/n]", default='y')
-            if use_ssh_key.lower() == 'y':
-                ssh_key_file = click.prompt("SSH private key file: ", default=ssh_dir)
-                ssh_auth = {"look_for_keys": "false", "key_filename": ssh_key_file}
-            else:
-                password = getpass.unix_getpass()
-                ssh_auth = {"look_for_keys": "false", "password": password}
-            # Need to loop getting the keyfile against file exist
-            ssh_conn = Connection(
-                host=host,
-                user=user_name,
-                port=22,
-                connect_kwargs=ssh_auth,
-            )
-        local_bundle_exec = 'sudo python /opt/pf9/hostagent/lib/python2.7/site-packages/datagatherer/datagatherer.py'
-        try:
-            ssh_result = ssh_conn.run(local_bundle_exec, pty=True)
-        except (paramiko.ssh_exception.SSHException, paramiko.ssh_exception.PasswordRequiredException) as except_err:
-            click.echo("FAILED: {}".format(except_err))
-            sys.exit(1)
-        click.echo("Result: {}".format(ssh_result))
-        # TEMP EXIT
-        sys.exit(0)
+        ssh_conn = Connection(host=host,
+                              user=user_name,
+                              port=22)
+        attempt = 0
+        while attempt < 4:
+            attempt = attempt + 1
+            try:
+                ssh_result_generate = ssh_conn.sudo(bundle_exec, hide='stderr')
+                ssh_result_bundle = ssh_conn.sudo('ls -sh /tmp/pf9-support.tgz', hide='stderr')
+                if ssh_result_generate.exited and ssh_result_bundle.exited:
+                    ssh_conn.close()
+                click.echo("\n\n")
+                click.echo("Generation of support bundle complete on:\n Host: " + host)
+                click.echo(ssh_result_bundle.stdout.strip())
+                # I don't like this exit point
+                # needs to return to bottom
+                sys.exit(0)
+            except paramiko.ssh_exception.NoValidConnectionsError:
+                click.echo("Unable to communicate with: " + host)
+                sys.exit(1)
+            except (paramiko.ssh_exception.SSHException,
+                    paramiko.ssh_exception.PasswordRequiredException,
+                    invoke.exceptions.AuthFailure) as err:
+                click.echo("\nAttempt [{}/3]".format(attempt))
+                click.echo("SSH Credentials for {}".format(host))
+                user_name = click.prompt("Username {}".format(user_name), default=user_name)
+                use_ssh_key = click.prompt("Use SSH Key Auth? [y/n]", default='y')
+                if use_ssh_key.lower() == 'y':
+                    ssh_key_file = click.prompt("SSH private key file: ", default=ssh_dir)
+                    ssh_auth = {"look_for_keys": "false", "key_filename": ssh_key_file}
+                else:
+                    password = getpass.unix_getpass()
+                    ssh_auth = {"look_for_keys": "false", "password": password}
+                click.echo("Sudo password for host: " + host)
+                sudo_pass = getpass.unix_getpass()
+                config = Config(overrides={'sudo': {'password': sudo_pass}})
+                ssh_conn = Connection(host=host,
+                                      user=user_name,
+                                      port=22,
+                                      connect_kwargs=ssh_auth,
+                                      config=config)
 
-    if not host:
-        except_msg = "No host provided."
-        # -- NOT IMPLEMENTED --
-        # Need to generate a list of hosts from resmgr/local inventories
-        #raise CLIException(except_msg)
-        click.echo("\n" + except_msg)
-        click.echo("\n\n" + click.Context(create).get_help())
-        sys.exit(1)
+
+        sys.exit(0)
 
     # \/--- From-Here ---\/
     # This all needs to go into a Module
@@ -158,6 +181,15 @@ def create(ctx, silent, host, off_line):
         sys.exit(0)
     else:
         click.echo("Unable to find an Active node that matched host: {}".format(host))
+        sys.exit(1)
+
+    if not host:
+        except_msg = "No host provided."
+        # -- NOT IMPLEMENTED --
+        # Need to generate a list of hosts from resmgr/local inventories
+        #raise CLIException(except_msg)
+        click.echo("\n" + except_msg)
+        click.echo("\n\n" + click.Context(create).get_help())
         sys.exit(1)
 
     if not silent:
