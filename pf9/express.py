@@ -14,7 +14,6 @@ from .config.commands import config
 from .support.commands import support
 from .cluster.commands import cluster
 
-
 @click.group()
 @click.version_option(message='%(version)s')
 @click.pass_context
@@ -42,6 +41,7 @@ def cli(ctx):
 
 # Add top-level commands to cli.
 # Any commands defined here or added will be toplevel
+
 cli.add_command(version)
 cli.add_command(config)
 cli.add_command(support)
