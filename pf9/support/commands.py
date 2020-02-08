@@ -64,6 +64,7 @@ def create(ctx, silent, host, offline, mgmt_plane):
                 return 0, out
             except subprocess.CalledProcessError as except_err:
                 click.echo("Support Bundle Creation Failed:")
+                exit(1)
 
         click.echo("Requesting support bundle generation directly from host: {}".format(host))
         ssh_dir = os.path.join(os.path.expanduser("~"), '.ssh/')
