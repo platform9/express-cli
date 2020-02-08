@@ -29,9 +29,9 @@ def bundle():
 
 @bundle.command('')
 @click.option('--host', help='Host for which you want a support bundle generated')
-@click.option('--silent', '-s', is_flag=True, help='Run silently, Helpful when utilized in scripts.')
-@click.option('--mgmt-plane', '-m', is_flag=True, help='Direct to host request to generate a support bundle.')
-@click.option('--offline', '-o', is_flag=True, help='Direct to host request to generate a support bundle.')
+@click.option('--silent', '-s', is_flag=True, hidden=True, help='Run silently, Helpful when utilized in scripts.')
+@click.option('--mgmt-plane', '-m', is_flag=True, hidden=True, help='Direct to host request to generate a support bundle.')
+@click.option('--offline', '-o', is_flag=True, hidden=True, help='Direct to host request to generate a support bundle.')
 @click.pass_context
 def create(ctx, silent, host, offline, mgmt_plane):
     """Request Creation of a Platform9 Support"""
@@ -102,7 +102,7 @@ def create(ctx, silent, host, offline, mgmt_plane):
                 else:
                     password = getpass.unix_getpass()
                     ssh_auth = {"look_for_keys": "false", "password": password}
-                click.echo("Sudo password for host: " + host)
+                click.echo("Sudo ", nl=False)
                 sudo_pass = getpass.unix_getpass()
                 config = Config(overrides={'sudo': {'password': sudo_pass}})
                 ssh_conn = Connection(host=host,
