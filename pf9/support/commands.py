@@ -59,9 +59,19 @@ def create(ctx, silent, host, offline, mgmt_plane):
     if offline:
         if use_localhost:
             try:
-                out = subprocess.check_output(shlex.split(bundle_exec))
-                click.echo(out)
-                return 0, out
+                click.echo("Generating support bundle on localhost")
+                subprocess.run(shlex.split('sudo ' + bundle_exec))
+                check_bundle_out = subprocess.run(["sudo", "ls", "-sh", "/tmp/pf9-support.tgz"],
+                                                  stdout=subprocess.PIPE,
+                                                  stderr=subprocess.PIPE)
+                if check_bundle_out.returncode == 0:
+                    click.echo("Generation of support bundle complete on:\n"
+                               "Host: localhost")
+                    click.echo(check_bundle_out.stdout)
+                    exit(0)
+                else:
+                    click.echo("Support Bundle Creation Failed:")
+                    exit(1)
             except subprocess.CalledProcessError as except_err:
                 click.echo("Support Bundle Creation Failed:")
                 exit(1)
