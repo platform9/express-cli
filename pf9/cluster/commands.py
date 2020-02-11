@@ -10,12 +10,13 @@ import time
 import click
 from ..exceptions import CLIException
 from .exceptions import PrepNodeFailed
+from ..exceptions import UserAuthFailure
 from .helpers import validate_ssh_details, get_local_node_addresses, check_vip_needed
 from ..modules.ostoken import GetToken
 from ..modules.express import Get
+from ..modules.util import Utils
 from .cluster_create import CreateCluster
 from .cluster_attach import AttachCluster
-
 
 def print_help_msg(command):
     """Print Command's Help message"""
@@ -37,49 +38,79 @@ def run_command(command, run_env=os.environ.copy()):
 def run_express(ctx, inv_file, ips):
     """Build the bash command that will be sent to pf9-express"""
     exp_ansible_runner = ctx.obj['pf9_exp_ansible_runner']
-    exp_config_file = ctx.obj['exp_config_file']
     log_file = os.path.join(ctx.obj['pf9_log_dir'],
                             datetime.now().strftime('express_%Y_%m_%d-%H_%m_%S.log'))
     # Invoke PMK only related playbook.
-    # Should this be defined directly in the inv file template? It could be a global setting
-    # for CLI inventory files.
-    ansible_extra_vars = "\"ansible_python_interpreter={}\"".format(sys.executable)
-    # THIS COMMAND WORKS -- -os_auth_token being included here: 
-    # ansible-playbook -vvv -i /tmp/pf9_zlha37f3/exp-inventory -l pmk -e "skip_prereq=1 autoreg='on' du_fqdn='cfe-tomchris.platform9.horse' ctrl_ip='131.153.252.189' du_username='tom.christopoulos@platform9.com' du_password=<REDACTED> os_auth_token='gAAAAABeOvs3gIZ81rEAjIqSJBm5hk_kKlKbOkcTLbS6XAii1e1z8-fCgmA1T00nB_LoiRlpWJl8cb8zaHd74wUQ5H7ZjgbF8jhh8LI1Ey9VfckjZnz40a0CPOiDbFSQKceAzsECevhv0TG5LIdoVb0fMWYGuxMEGdbdU4nZA51bULbPOfAMOww'" ~/pf9/pf9-express/express/pf9-k8s-express.yml | tee /home/tomchris/pf9/log/express_debug.log
+
+    # THIS COMMAND WORKS -- -os_auth_token being included here:
+    # ansible-playbook -i /home/tomchris/pf9/tmp_config/exp-inventory -l pmk
+    # -e "
+    # skip_prereq=1 autoreg='on'
+    # du_fqdn='cfe-tomchris.platform9.horse'
+    # ctrl_ip='131.153.252.189'
+    # du_username='tom.christopoulos@platform9.com'
+    # du_password='<REDACTED>'
+    # os_auth_token='<REDACTED>'"
+    # /home/tomchris/pf9/pf9-express/express/pf9-k8s-express.yml | tee /home/tomchris/pf9/log/express_debug.log
+    #
     #     Inventory for above:
     #     172.31.19.159 ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_user=tomchris ansible_ssh_private_key_file=~/.ssh/tom-pf9
-    cmd = '{0} -a -b --pmk -v {1} -c {2} -l {3} pmk'.format(exp_ansible_runner,
-                                                            inv_file, exp_config_file, log_file)
-    # Current implementation is to have this express invocation dumps logs in
-    # a known location instead of capturing it here. Here we care only about
-    # the exit code and fake progress.
+    try:
+        du_fqdn = Get(ctx).region_fqdn()
+        if du_fqdn is None:
+            msg = "Failed to obtain region url from: {} \
+                    for region: {}".format(ctx.param["du_url"], ctx.param["du_region"])
+            raise CLIException(msg)
+    except (UserAuthFailure, CLIException):
+        raise
+    extra_args = '-e "skip_prereq=1 autoreg={} du_fqdn={} ctrl_ip={} du_username={} du_password={} ' \
+                 'os_username={} os_password={} os_region={} os_tenant={} os_auth_token={}"'.format(
+                  "'on'",
+                  du_fqdn,
+                  Utils.ip_from_dns_name(du_fqdn),
+                  ctx.params['du_username'],
+                  ctx.params['du_password'],
+                  ctx.params['du_username'],
+                  ctx.params['du_password'],
+                  ctx.params['du_region'],
+                  ctx.params['du_tenant'],
+                  ctx.params['token'])
+    cmd = '{} -i {} -l pmk {} {}'\
+        .format(
+                ctx.obj['pf9_ansible-playbook'],
+                inv_file,
+                extra_args,
+                "/home/tomchris/pf9/pf9-express/express/pf9-k8s-express.yml")
 
     # Progress bar logic: Assume each host takes x time. Number of hosts is n
     # Total estimated time = n * x. We check for command status and refresh the
     # bar even ys with n*x/y.
-    time_per_host_secs = 240
+    time_per_host_secs = 180
     total_nodes = len(ips)
     poll_interval_secs = 5
-    with click.progressbar(length=total_nodes * time_per_host_secs, color="orange",
+    est_total_time = total_nodes * time_per_host_secs
+    with click.progressbar(length=est_total_time, color="orange",
                            label='Preparing nodes') as progbar:
-        cmd_proc = subprocess.Popen(shlex.split(cmd), env=os.environ, stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
         elapsed = 0
-        while cmd_proc.poll() is None:
-            elapsed = elapsed + poll_interval_secs
-            if elapsed < (total_nodes * time_per_host_secs - poll_interval_secs):
-                progbar.update(poll_interval_secs)
-
-            time.sleep(poll_interval_secs)
+        with open(log_file, 'w') as log_file_write:
+            cmd_proc = subprocess.Popen(shlex.split(cmd), env=os.environ, stdout=log_file_write,
+                                        stderr=subprocess.STDOUT, encoding='utf-8')
+            while cmd_proc.poll() is None:
+                # sys.stdout.write(cmd_proc.stdout.readline())
+                # log_file_write.write(cmd_proc.stdout.readline())
+                elapsed = elapsed + poll_interval_secs
+                if elapsed < (est_total_time - poll_interval_secs):
+                    progbar.update(poll_interval_secs)
+                time.sleep(poll_interval_secs)
 
         # Success or failure... push the progress to 100%
-        progbar.update(total_nodes * time_per_host_secs)
+        progbar.update(est_total_time)
 
-    if cmd_proc.returncode:
-        msg = "Code: {}, output log: {}".format(cmd_proc.returncode, log_file)
-        raise PrepNodeFailed(msg)
+        if cmd_proc.returncode:
+            msg = "Code: {}, output log: {}".format(cmd_proc.returncode, log_file)
+            raise PrepNodeFailed(msg)
 
-    return cmd_proc.returncode, log_file
+        return cmd_proc.returncode, log_file
 
 
 # NOTE: a utils file may be a better location for these helper methods
@@ -130,20 +161,6 @@ def build_express_inventory_file(user, password, ssh_key, ips,
         pass
 
     return inv_file_path
-
-
-def get_token_project(ctx):
-    Get(ctx).active_config()
-
-    # Get Token and Tenant ID (app pulling tenant_ID "project_id" into get_token)
-    auth_obj = GetToken()
-    token, project_id = auth_obj.get_token_project(
-                ctx.params["du_url"],
-                ctx.params["du_username"],
-                ctx.params["du_password"],
-                ctx.params["du_tenant"] )
-
-    return token, project_id
 
 
 def create_cluster(ctx):
@@ -258,7 +275,7 @@ def create(ctx, **kwargs):
         check_vip_needed(ctx.params['master_ip'], ctx.params.get('mastervip', None),
                          ctx.params.get('mastervipif', None))
 
-        ctx.params['token'], ctx.params['project_id'] = get_token_project(ctx)
+        ctx.params['token'], ctx.params['project_id'] = Get(ctx).get_token_project()
 
         if len(all_ips) > 0:
             # Nodes are provided. So prep them.
@@ -341,7 +358,7 @@ def bootstrap(ctx, **kwargs):
         sys.exit(1)
 
     try:
-        ctx.params['token'], ctx.params['project_id'] = get_token_project(ctx)
+        ctx.params['token'], ctx.params['project_id'] = Get(ctx).get_token_project()
 
         # This will throw when the prep node fails
         rcode, output = prep_node(ctx, None, None,
@@ -381,7 +398,7 @@ def attach_node(ctx, **kwargs):
         click.secho(msg.format(ctx.params['cluster_name']), fg="red")
         sys.exit(1)
 
-    ctx.params['token'], ctx.params['project_id'] = get_token_project(ctx)
+    ctx.params['token'], ctx.params['project_id'] = Get(ctx).get_token_project()
     master_ips = ()
     worker_ips = ()
     for ip in ctx.params['master_ip']:
@@ -437,6 +454,7 @@ def prepnode(ctx, user, password, ssh_key, ips):
     parse_ips = ''.join(ips).split(' ') if all(len(x)==1 for x in ips) else list(ips)
     adj_ips = ()
     try:
+        ctx.params['token'] = Get(ctx).get_token()
         for ip in parse_ips:
             if ip == "127.0.0.1" or ip == "localhost" or ip in get_local_node_addresses():
                 adj_ips = adj_ips + ("localhost",)

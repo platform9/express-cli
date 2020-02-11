@@ -78,7 +78,8 @@ setup(
                       'urllib3',
                       'paramiko',
                       'fabric',
-                      'invoke'
+                      'invoke',
+                      'ansible'
                       ],
     extras_require={
         'test': ['coverage', 'pytest', 'pytest-cov', 'mock'],

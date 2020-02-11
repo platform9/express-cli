@@ -1,6 +1,7 @@
 ##
 ## Ansible Inventory
 ##
+
 [all]
 [all:vars]
 
