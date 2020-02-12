@@ -41,20 +41,6 @@ def run_express(ctx, inv_file, ips):
     log_file = os.path.join(ctx.obj['pf9_log_dir'],
                             datetime.now().strftime('express_%Y_%m_%d-%H_%m_%S.log'))
     # Invoke PMK only related playbook.
-
-    # THIS COMMAND WORKS -- -os_auth_token being included here:
-    # ansible-playbook -i /home/tomchris/pf9/tmp_config/exp-inventory -l pmk
-    # -e "
-    # skip_prereq=1 autoreg='on'
-    # du_fqdn='cfe-tomchris.platform9.horse'
-    # ctrl_ip='131.153.252.189'
-    # du_username='tom.christopoulos@platform9.com'
-    # du_password='<REDACTED>'
-    # os_auth_token='<REDACTED>'"
-    # /home/tomchris/pf9/pf9-express/express/pf9-k8s-express.yml | tee /home/tomchris/pf9/log/express_debug.log
-    #
-    #     Inventory for above:
-    #     172.31.19.159 ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_user=tomchris ansible_ssh_private_key_file=~/.ssh/tom-pf9
     try:
         du_fqdn = Get(ctx).region_fqdn()
         if du_fqdn is None:
@@ -64,12 +50,10 @@ def run_express(ctx, inv_file, ips):
     except (UserAuthFailure, CLIException):
         raise
     extra_args = '-e "skip_prereq=1 autoreg={} du_fqdn={} ctrl_ip={} du_username={} du_password={} ' \
-                 'os_username={} os_password={} os_region={} os_tenant={} os_auth_token={}"'.format(
+                 'du_region={} du_tenant={} du_token={}"'.format(
                   "'on'",
                   du_fqdn,
                   Utils.ip_from_dns_name(du_fqdn),
-                  ctx.params['du_username'],
-                  ctx.params['du_password'],
                   ctx.params['du_username'],
                   ctx.params['du_password'],
                   ctx.params['du_region'],
@@ -96,8 +80,6 @@ def run_express(ctx, inv_file, ips):
             cmd_proc = subprocess.Popen(shlex.split(cmd), env=os.environ, stdout=log_file_write,
                                         stderr=subprocess.STDOUT, encoding='utf-8')
             while cmd_proc.poll() is None:
-                # sys.stdout.write(cmd_proc.stdout.readline())
-                # log_file_write.write(cmd_proc.stdout.readline())
                 elapsed = elapsed + poll_interval_secs
                 if elapsed < (est_total_time - poll_interval_secs):
                     progbar.update(poll_interval_secs)
