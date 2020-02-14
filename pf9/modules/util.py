@@ -2,6 +2,9 @@ import os
 import requests
 from ..exceptions import CLIException
 import socket
+import logging
+import sys
+from logging.handlers import TimedRotatingFileHandler
 
 
 class Utils:
@@ -9,6 +12,24 @@ class Utils:
     @staticmethod
     def ip_from_dns_name(fqdn):
         return str(socket.gethostbyname_ex(fqdn)[2][0])
+
+
+class Logger:
+    def __init__(self, log_file):
+        self.FORMATTER = logging.Formatter("%(asctime)s — %(name)s — %(levelname)s — %(message)s")
+        self.LOG_FILE = log_file
+
+    def get_file_handler(self):
+        file_handler = TimedRotatingFileHandler(self.LOG_FILE, when='midnight')
+        file_handler.setFormatter(self.FORMATTER)
+        return file_handler
+
+    def get_logger(self, logger_name):
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.DEBUG)
+        logger.addHandler(self.get_file_handler())
+        logger.propagate = False
+        return logger
 
 
 class Pf9ExpVersion:

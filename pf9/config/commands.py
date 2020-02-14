@@ -8,25 +8,16 @@ from ..exceptions import CLIException
 from ..exceptions import UserAuthFailure
 from ..modules.ostoken import GetToken
 from ..modules.express import Get
+from ..modules.util import Logger
+
+# Initialize logger
+logger = Logger(os.path.join(os.path.expanduser("~"), 'pf9/log/pf9ctl.log')).get_logger(__name__)
 
 
 @click.group()
-def config():
+@click.pass_context
+def config(ctx):
     """Configure CLI for Platform9 management planes."""
-
-
-def manage_dns_resolvers(ctx, value):
-    """Selectively Prompt for DNS Servers"""
-
-    if value:
-        if ctx.params['dns_resolver1'] is None:
-            ctx.params['dns_resolver1'] = click.prompt('Enter DNS Resolver 1')
-        if ctx.params['dns_resolver2'] is None:
-            ctx.params['dns_resolver2'] = click.prompt('Enter DNS Resolver 2')
-    else:
-        ctx.params['dns_resolver1'] = "8.8.8.8"
-        ctx.params['dns_resolver2'] = "8.8.4.4"
-    return value
 
 
 @config.command('create')
@@ -36,15 +27,11 @@ def manage_dns_resolvers(ctx, value):
 @click.option('--os_password', required=True, prompt='Platform9 password', hide_input=True)
 @click.option('--os_region', required=True, prompt='Platform9 region')
 @click.option('--os_tenant', required=True, prompt='Platform9 tenant', default='service')
-@click.option('--proxy_url', default='-')
-@click.option('--manage_hostname', default=False)
-@click.option('--dns_resolver1', is_eager=True)
-@click.option('--dns_resolver2', is_eager=True)
-@click.option('--manage_resolver', type=bool, default=False, callback=manage_dns_resolvers)
 @click.pass_context
-def create(ctx, **kwargs):
+def create(ctx, config_name, du_url, os_username, os_password, os_region, os_tenant):
     """Create Platform9 management plane config."""
     # creates and activates pf9-express config file
+    logger.info(msg=click.get_current_context().info_name)
 
     pf9_exp_conf_dir = ctx.obj['pf9_exp_conf_dir']
 
@@ -65,7 +52,8 @@ def create(ctx, **kwargs):
         try:
             access_rights = 0o700
             os.makedirs(pf9_exp_conf_dir, access_rights)
-        except Exception:
+        except Exception as except_err:
+            logger.exception(except_err)
             click.echo("Creation of the directory %s failed" % pf9_exp_conf_dir)
         else:
             click.echo("Successfully created the directory %s " % pf9_exp_conf_dir)
@@ -73,6 +61,9 @@ def create(ctx, **kwargs):
     with open(pf9_exp_conf_dir + 'express.conf', 'w') as file:
         for k,v in ctx.params.items():
             file.write(k + '|' + str(v) + '\n')
+            if k == 'config_name':
+                config_name = v
+    logger.info('Successfully wrote config: {}'.format(config_name))
     click.echo('Successfully wrote Platform9 management plane configuration')
 
 
@@ -80,6 +71,7 @@ def create(ctx, **kwargs):
 @click.pass_obj
 def config_list(obj):
     """List Platform9 management plane configs."""
+    logger.info(msg=click.get_current_context().info_name)
     pf9_exp_conf_dir = obj['pf9_exp_conf_dir']
 
     if os.path.exists(pf9_exp_conf_dir):
@@ -99,10 +91,10 @@ def config_list(obj):
             else:
                 result.add_row([count, ' ', _config["name"], _config["du_url"], _config["os_region"]])
             count = count + 1
-
         click.echo(result)
-
+        logger.info("config list returned successfully")
     else:
+        logger.info('No Platform9 management plane configs exist')
         click.echo('No Platform9 management plane configs exist')
 
 
@@ -112,7 +104,9 @@ def config_list(obj):
 def activate(obj, config_name):
     """Activate Platform9 management plane config."""
     # activates pf9-express config file
-    click.echo("Activating config %s" % config)
+    logger.info(msg=click.get_current_context().info_name)
+    logger.info(msg="Activating config %s" % config_name)
+    click.echo("Activating config %s" % config_name)
     exp_conf_dir = obj['pf9_exp_conf_dir']
     exp_conf_file = obj['pf9_exp_conf_dir'] + 'express.conf'
 
@@ -134,6 +128,7 @@ def activate(obj, config_name):
         if f == (config_name + '.conf'):
             shutil.move(exp_conf_dir + f, exp_conf_file)
 
+    logger.info(msg='Config %s is now active' % config_name)
     click.echo('Config %s is now active' % config_name)
 
 
@@ -151,6 +146,7 @@ def config_validate(ctx):
         stdout: Error message
         rc:     1
     """
+    logger.info(msg=click.get_current_context().info_name)
     try:
         # Load Active Config into ctx
         Get(ctx).active_config()
@@ -161,70 +157,19 @@ def config_validate(ctx):
                 ctx.params["du_password"],
                 ctx.params["du_tenant"])
         if token is None:
+            click.echo("Validation of config:[{}] Failed to: {}".format(ctx.params['config_name'], ctx.params["du_url"]))
             msg = "Failed to obtain Authentication from: {}".format(ctx.params["du_url"])
             raise CLIException(msg)
         else:
+            logger.info(msg="Config {} Validation Successful".format(ctx.params['config_name']))
             return token
-    except (UserAuthFailure, CLIException) as e:
-        click.echo(e)
+    except (UserAuthFailure, CLIException) as except_msg:
+        logger.exception("Config: {} Validation Failed. Exception: {}".format(ctx.params['config_name'], except_msg))
+        click.echo("Validation of config:[{}] Failed to: {}".format(ctx.params['config_name'], ctx.params["du_url"]))
         sys.exit(1)
-    except Exception as e:
-        click.echo("Message: {}\n    type: {}".format(e, type(e)), err=True)
-        sys.exit(1)
-
-
-@config.command('get-token')
-@click.option('--silent', '-s', is_flag=True, help='Return only the token. Helpful when utilized in scripts.')
-@click.pass_context
-def get_token(ctx, silent):
-    """Returns an Auth Token for the active config from the Platform9 Management Plane"""
-    try:
-        # Load Active Config into ctx
-        Get(ctx).active_config()
-        # Get Token
-        token = GetToken().get_token_v3(
-                ctx.params["du_url"],
-                ctx.params["du_username"],
-                ctx.params["du_password"],
-                ctx.params["du_tenant"])
-        if token is not None:
-            if silent:
-                click.echo(token)
-                sys.exit(0)
-                
-            click.echo("Management Plane: {}".format(ctx.params["du_url"]))
-            click.echo("Username: {}".format(ctx.params["du_username"]))
-            click.echo("Region: {}".format(ctx.params["du_region"]))
-            click.echo("Token: %s" % token)
-        else:
-            msg = "Failed to obtain Authentication from: {}".format(ctx.params["du_url"])
-            raise CLIException(msg)
-    except (UserAuthFailure, CLIException) as e:
-        click.echo(e, err=True)
-        sys.exit(1)
-    except Exception as e:
-        click.echo("Message: {}\n    type: {}".format(e, type(e)), err=True)
-        sys.exit(1)
-
-
-@config.command('get-region-fqdn')
-@click.pass_context
-def test_get_region_url(ctx):
-    """Returns the FQDN of the public service api endpoint
-    on the Platform9 Management Plane for the region specified in the current active config
-    """
-    # Add returning the token and IP Address
-    # include usage examples in the doc
-    try:
-        region_url = Get(ctx).region_fqdn()
-        if region_url is None:
-            msg = "Failed to obtain region url from: {} \
-                    for region: {}".format(ctx.param["du_url"], ctx.param["du_region"])
-            raise CLIException(msg)
-        click.echo(region_url)
-    except (UserAuthFailure, CLIException) as e:
-        click.echo(e)
-        sys.exit(1)
-    except Exception as e:
-        click.echo(e)
+    except Exception as except_msg:
+        logger.exception("GENERICALLY CAUGHT EXCEPTION!!! "
+                         "Validation of config:{} Failed to: {}: {}".format(
+                          ctx.params['config_name'], ctx.params['du_url'], except_msg))
+        click.echo("Validation of config:[{}] Failed to: {}".format(ctx.params['config_name'], ctx.params["du_url"]))
         sys.exit(1)
