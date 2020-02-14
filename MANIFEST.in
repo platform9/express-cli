@@ -10,4 +10,4 @@ prune build
 prune dist
 recursive-exclude *.egg-info *
 recursive-include tests *
-include ./pf9/cluster/templates/pmk_inventory.tpl
+recursive-include pf9/cluster/templates *
