@@ -19,7 +19,7 @@ assert() {
     if [[ -f ${log_file} ]]; then
         echo -e "\n\n"
 	echo ""
-	echo "Installation failed, Here are the last 10 lines from the log" 
+	echo "Installation failed, Here are the last 10 lines from the log"
 	echo "The full installation log is available at ${log_file}"
 	echo "If more information is needed re-run the install with --debug"
 	echo "$(tail ${log_file})"
@@ -41,7 +41,7 @@ stdout_log(){
 	    output="DEBUGGING: $(date +"%T") : $(bc <<<$(date +"%s.%N")-${start_time}) :$(basename $0) : ${1}"
 	else
 	    output="DEBUGGING: $(date +"%T") : $(basename $0) : ${1}"
-	fi            
+	fi
         echo "${output}" 2>&1 | tee -a ${log_file}
     else
         echo "$1" 2>&1 | tee -a ${log_file}
@@ -108,7 +108,7 @@ init_venv_python() {
 
     if [[ ${python_version} == 2 ]]; then
         pyver="";
-    else 
+    else
         pyver="3";
     fi
     stdout_log "Initializing Virtual Environment using Python ${python_version}"
@@ -117,9 +117,9 @@ init_venv_python() {
         debugging "Validating pip"
 	if ! which pip > /dev/null 2>&1; then
             debugging "ERROR: missing package: pip (attempting to install using get-pip.py)"
-            curl -s -o "${pip_path} ${pip_url}"
-            if [ ! -r "${pip_path}" ]; then assert "failed to download get-pip.py (from ${pip_url})"; fi
-            
+            curl -s -o ${pip_path} ${pip_url}
+            if [ ! -r ${pip_path} ]; then assert "failed to download get-pip.py (from ${pip_url})"; fi
+
             if ! (python${pyver} "${pip_path}"); then
                 debugging "ERROR: failed to install package: pip (attempting to install via 'sudo get-pip.py')"
                 if (sudo python${pyver} "${pip_path}" > /dev/null 2>&1); then
@@ -184,7 +184,7 @@ debugging "CLFs: $*"
 debugging "branch: ${branch}"
 debugging "cli_url: ${cli_url}"
 # Set the path so double quotes don't use the litteral '~'
-pf9_basedir=$(dirname ~/pf9/.) 
+pf9_basedir=$(dirname ~/pf9/.)
 pip_path=${pf9_basedir}/get_pip.py
 log_file=${pf9_basedir}/log/cli_install.log
 pf9_bin=${pf9_basedir}/bin
@@ -192,7 +192,7 @@ venv="${pf9_basedir}/pf9-venv"
 venv_python="${venv}/bin/python"
 venv_activate="${venv}/bin/activate"
 pip_url="https://bootstrap.pypa.io/get-pip.py"
-cli_entrypoint=$(dirname ${venv_python})/pf9ctl
+cli_entrypoint=$(dirname ${venv_python})/express
 cli_exec=${pf9_bin}/pf9ctl
 
 
@@ -218,9 +218,9 @@ if ! (${venv_python} -m pip install --upgrade ${cli_url} > debugging); then
 #stdout_log "Installing Platform9 Express Management Environment"
 #if ! (${cli_entrypoint} init > /dev/null 2>&1); then
 #    assert "Initialization of Platform9 Express-CLI Failed"; fi
-if [ ! -f "${cli_exec}" ]; then
+if [ ! -f ${cli_exec} ]; then
     debugging "Create Express-CLI symlink"
-    if ! (ln -s "${cli_entrypoint}" "${cli_exec}" > /dev/null 2>&1); then
+    if ! (ln -s ${cli_entrypoint} ${cli_exec} > /dev/null 2>&1); then
 	    assert "failed to create Express-CLI symlink: ${cli_exec}"; fi
 fi
 
