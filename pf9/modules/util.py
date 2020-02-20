@@ -1,9 +1,7 @@
-import os
 import requests
 from ..exceptions import CLIException
 import socket
 import logging
-import sys
 from logging.handlers import TimedRotatingFileHandler
 
 

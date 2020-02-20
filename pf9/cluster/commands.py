@@ -41,7 +41,7 @@ def prep_node(ctx, user, password, ssh_key, ips, node_prep_only):
         elapsed = 0
         with open(log_file, 'w') as log_file_write:
             cmd_proc = subprocess.Popen(shlex.split(cmd), env=os.environ, stdout=log_file_write,
-                                        stderr=subprocess.STDOUT, encoding='utf-8')
+                                        stderr=subprocess.STDOUT)
             while cmd_proc.poll() is None:
                 elapsed = elapsed + poll_interval_secs
                 if elapsed < (est_total_time - poll_interval_secs):

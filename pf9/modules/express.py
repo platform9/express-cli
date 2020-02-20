@@ -16,7 +16,6 @@ from pf9.modules.util import Utils, Logger
 logger = Logger(os.path.join(os.path.expanduser("~"), 'pf9/log/pf9ctl.log')).get_logger(__name__)
 
 
-
 class ResMgr:
     """express.ResMgr(ctx) contains methods to interact with Platform9 Reservation Manager"""
     def __init__(self, region_url, token):
@@ -255,26 +254,28 @@ class PrepExpressRun:
             tmp_dir = tempfile.mkdtemp(prefix='pf9_')
             inv_file_path = os.path.join(tmp_dir, 'exp-inventory')
             if len(self.ips) == 1 and self.ips[0] == 'localhost':
-                node_details = 'localhost ansible_python_interpreter=sys.executable ' \
-                               'ansible_connection=local ansible_host=localhost\n'
+                node_details = 'localhost ansible_python_interpreter={} ' \
+                               'ansible_connection=local ansible_host=localhost\n'.format(
+                                self.ctx.obj['sys.executable'])
             else:
                 # Build the great inventory file
                 for ip in self.ips:
                     if ip == 'localhost':
-                        node_info = 'localhost ansible_python_interpreter=sys.executable ' \
-                                    'ansible_connection=local ansible_host=localhost\n'
+                        node_info = 'localhost ansible_python_interpreter={} ' \
+                                    'ansible_connection=local ansible_host=localhost\n'.format(
+                                     self.ctx.obj['sys.executable'])
                     else:
                         # TODO: MOVE PASSWORD TO EXTRAVARS!!!
                         if self.password:
                             node_info = "{0} ansible_ssh_common_args='-o StrictHostKeyChecking=no' " \
                                         "ansible_user={1} " \
                                         "ansible_ssh_pass={2}\n".format(
-                                ip, self.user, self.password)
+                                         ip, self.user, self.password)
                         else:
                             node_info = "{0} ansible_ssh_common_args='-o StrictHostKeyChecking=no' " \
                                         "ansible_user={1} " \
                                         "ansible_ssh_private_key_file={2}\n".format(
-                                ip, self.user, self.ssh_key)
+                                         ip, self.user, self.ssh_key)
                     node_details = "".join((node_details, node_info))
 
             inv_template = Template(inv_tpl_contents)
