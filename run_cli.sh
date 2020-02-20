@@ -136,7 +136,9 @@ init_venv_python() {
             fi
         fi
     fi
-    if ! (virtualenv -p python${pyver} ${venv} > /dev/null 2>&1); then assert "Creation of virtual environment failed"; fi
+    if ! (virtualenv -p python${pyver} --system-site-packages ${venv} > /dev/null 2>&1); then
+        assert "Creation of virtual environment failed"
+    fi
     debugging "venv_python: ${venv_python}"
     if [ ! -r ${venv_python} ]; then assert "failed to initialize virtual environment"; fi
 }
@@ -208,11 +210,11 @@ else
 fi
 
 debugging "Upgrade pip"
-if ! (${venv_python} -m pip install --upgrade pip setuptools wheel > /dev/null 2>&1); then
+if ! (${venv_python} -m pip install --upgrade --ignore-installed pip setuptools wheel > /dev/null 2>&1); then
     assert "Pip upgrade failed"; fi
 
 stdout_log "Installing Platform9 Express Management Suite"
-if ! (${venv_python} -m pip install --upgrade ${cli_url} > debugging); then
+if ! (${venv_python} -m pip install --upgrade --ignore-installed ${cli_url} > debugging); then
     assert "Installation of Platform9 Express CLI Failed"; fi
 
 #stdout_log "Installing Platform9 Express Management Environment"

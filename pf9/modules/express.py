@@ -256,14 +256,14 @@ class PrepExpressRun:
             if len(self.ips) == 1 and self.ips[0] == 'localhost':
                 node_details = 'localhost ansible_python_interpreter={} ' \
                                'ansible_connection=local ansible_host=localhost\n'.format(
-                                self.ctx.obj['sys.executable'])
+                                self.ctx.obj['venv_python'])
             else:
                 # Build the great inventory file
                 for ip in self.ips:
                     if ip == 'localhost':
                         node_info = 'localhost ansible_python_interpreter={} ' \
                                     'ansible_connection=local ansible_host=localhost\n'.format(
-                                     self.ctx.obj['sys.executable'])
+                                     self.ctx.obj['venv_python'])
                     else:
                         # TODO: MOVE PASSWORD TO EXTRAVARS!!!
                         if self.password:
