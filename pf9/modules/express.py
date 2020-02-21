@@ -132,7 +132,6 @@ class Get:
             return does not need to be captured if context is available
         """
         config_file = os.path.join(self.ctx.obj['pf9_db_dir'], 'express.conf')
-        logger(config_file)
         if os.path.exists(config_file):
             try:
                 with open(config_file, 'r') as data:
