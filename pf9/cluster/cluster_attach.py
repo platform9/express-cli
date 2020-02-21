@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 import requests
 import json
@@ -55,6 +54,7 @@ class AttachCluster(object):
             msg = "Timed out waiting for {} master to become active. Current " \
                   "active count {}.".format(master_node_num, current_active_masters)
             raise FailedActiveMasters(msg)
+        logger.info("{} of {} master nodes now available".format(master_node_num, current_active_masters))
 
     def get_num_active_masters(self):
         num_active_masters = 0
@@ -105,6 +105,7 @@ class AttachCluster(object):
             for key, value in host['extensions']['interfaces']['data'].items():
                 for iface_name, iface_ip in host['extensions']['interfaces']['data']['iface_ip'].items():
                     if iface_ip == host_ip:
+                        logger.info("Node host_id: {}".format(host['id']))
                         return host['id']
 
     def get_uuids(self, host_ips):
@@ -207,9 +208,9 @@ class AttachCluster(object):
 
             cnt += 1
             time.sleep(5)
+        logger.info("Attach Complete")
 
         if cnt >= num_retries:
             msg = "Failed to attach to cluster after {} attempts".format(num_retries)
             raise ClusterAttachFailed(msg)
-
 

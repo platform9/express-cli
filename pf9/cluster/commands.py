@@ -302,6 +302,7 @@ def bootstrap(ctx, **kwargs):
                     " cluster. {}".format(e.msg), fg="red")
         sys.exit(1)
 
+    logger.info("Successfully created cluster {} using this node".format(ctx.params['cluster_name']))
     click.secho("Successfully created cluster {} "\
                 "using this node".format(ctx.params['cluster_name']),
                 fg="green")
