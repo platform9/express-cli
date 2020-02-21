@@ -33,7 +33,7 @@ def create(ctx, config_name, du_url, os_username, os_password, os_region, os_ten
     # creates and activates pf9-express config file
     logger.info(msg=click.get_current_context().info_name)
 
-    pf9_exp_conf_dir = ctx.obj['pf9_exp_conf_dir']
+    pf9_exp_conf_dir = ctx.obj['pf9_db_dir']
 
     # Backup existing config if one exist
     if os.path.exists(pf9_exp_conf_dir + 'express.conf'):
@@ -72,7 +72,7 @@ def create(ctx, config_name, du_url, os_username, os_password, os_region, os_ten
 def config_list(obj):
     """List Platform9 management plane configs."""
     logger.info(msg=click.get_current_context().info_name)
-    pf9_exp_conf_dir = obj['pf9_exp_conf_dir']
+    pf9_exp_conf_dir = obj['pf9_db_dir']
 
     if os.path.exists(pf9_exp_conf_dir):
         count = 1
@@ -107,8 +107,8 @@ def activate(obj, config_name):
     logger.info(msg=click.get_current_context().info_name)
     logger.info(msg="Activating config %s" % config_name)
     click.echo("Activating config %s" % config_name)
-    exp_conf_dir = obj['pf9_exp_conf_dir']
-    exp_conf_file = obj['pf9_exp_conf_dir'] + 'express.conf'
+    exp_conf_dir = obj['pf9_db_dir']
+    exp_conf_file = obj['pf9_db_dir'] + 'express.conf'
 
     if os.path.exists(exp_conf_file):
         with open(exp_conf_file, 'r') as current:

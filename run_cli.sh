@@ -214,7 +214,7 @@ if ! (${venv_python} -m pip install --upgrade --ignore-installed pip setuptools 
     assert "Pip upgrade failed"; fi
 
 stdout_log "Installing Platform9 Express Management Suite"
-if ! (${venv_python} -m pip install --upgrade --ignore-installed ${cli_url} > debugging); then
+if ! (${venv_python} -m pip install --upgrade --ignore-installed ${cli_url} > /dev/null 2>&1); then
     assert "Installation of Platform9 Express CLI Failed"; fi
 
 #stdout_log "Installing Platform9 Express Management Environment"

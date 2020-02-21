@@ -10,4 +10,5 @@ prune build
 prune dist
 recursive-exclude *.egg-info *
 recursive-include tests *
+recursive-include pf9/express *
 recursive-include pf9/cluster/templates *
