@@ -58,7 +58,7 @@ def create(ctx, config_name, du_url, os_username, os_password, os_region, os_ten
         else:
             click.echo("Successfully created the directory %s " % pf9_exp_conf_dir)
 
-    with open(pf9_exp_conf_dir + 'express.conf', 'w') as file:
+    with open(ctx.obj['exp_config_file'], 'w') as file:
         for k,v in ctx.params.items():
             file.write(k + '|' + str(v) + '\n')
             if k == 'config_name':
