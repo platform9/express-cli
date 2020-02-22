@@ -26,8 +26,8 @@ class AttachCluster(object):
         self.headers = { 'content-type': 'application/json', 'X-Auth-Token': self.token }
 
     def wait_for_n_active_masters(self, master_node_num):
-        TIMEOUT = 15 # in mins
-        POLL_INTERVAL = 30 # in secs
+        TIMEOUT = 10  # in mins
+        POLL_INTERVAL = 5  # in secs
         total_timeout_duration = 60 * TIMEOUT
         timeout = int(time.time()) + total_timeout_duration
         current_active_masters = 0
@@ -41,9 +41,10 @@ class AttachCluster(object):
                     break
                 elif int(time.time()) < timeout - POLL_INTERVAL:
                     bar.update(POLL_INTERVAL)
+                    if timeout % 30 == 0:
+                        logger.info("{} of {} Master Nodes Active".format(current_active_masters, master_node_num))
                 elif int(time.time()) > timeout:
                     break
-                
                 time.sleep(POLL_INTERVAL)
 
             # Success or failure... push the progress to 100%
