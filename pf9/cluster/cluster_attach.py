@@ -26,29 +26,29 @@ class AttachCluster(object):
         self.headers = { 'content-type': 'application/json', 'X-Auth-Token': self.token }
 
     def wait_for_n_active_masters(self, master_node_num):
-        TIMEOUT = 10  # in mins
-        POLL_INTERVAL = 5  # in secs
-        total_timeout_duration = 60 * TIMEOUT
-        timeout = int(time.time()) + total_timeout_duration
-        current_active_masters = 0
+        TIMEOUT_SECS = 600  # in mins
+        POLL_INTERVAL = 10  # in secs
         flag_found_n_masters = False
-        with click.progressbar(length=total_timeout_duration, color="orange",
+        start_time = time.time()
+        with click.progressbar(length=TIMEOUT_SECS, color="orange",
                            label='Waiting for all masters to become active') as bar:
+            log_counter = 0
             while True:
+                log_counter = log_counter + 1
                 current_active_masters = self.get_num_active_masters()
                 if int(current_active_masters) == int(master_node_num):
                     flag_found_n_masters = True
                     break
-                elif int(time.time()) < timeout - POLL_INTERVAL:
+                elif int(time.time() - start_time) < TIMEOUT_SECS:
                     bar.update(POLL_INTERVAL)
-                    if timeout % 30 == 0:
-                        logger.info("{} of {} Master Nodes Active".format(current_active_masters, master_node_num))
-                elif int(time.time()) > timeout:
+                    if log_counter % 3 == 0:
+                        logger.info("{} of {} Master nodes active".format(current_active_masters, master_node_num))
+                elif int(time.time() - start_time) > TIMEOUT_SECS:
                     break
                 time.sleep(POLL_INTERVAL)
 
             # Success or failure... push the progress to 100%
-            bar.update(total_timeout_duration)
+            bar.update(TIMEOUT_SECS)
 
         # enforce TIMEOUT
         if not flag_found_n_masters:
