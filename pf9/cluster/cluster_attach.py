@@ -26,13 +26,17 @@ class AttachCluster(object):
         self.headers = { 'content-type': 'application/json', 'X-Auth-Token': self.token }
 
     def wait_for_n_active_masters(self, master_node_num):
-        TIMEOUT_SECS = 600  # in mins
+        if master_node_num == 1:
+            TIMEOUT_SECS = 300
+        else:
+            TIMEOUT_SECS = 600
         POLL_INTERVAL = 10  # in secs
         flag_found_n_masters = False
         start_time = time.time()
         with click.progressbar(length=TIMEOUT_SECS, color="orange",
-                           label='Waiting for all masters to become active') as bar:
+                               label='Waiting for all masters to become active') as bar:
             log_counter = 0
+            update_interval = time.time()
             while True:
                 log_counter = log_counter + 1
                 current_active_masters = self.get_num_active_masters()
@@ -40,11 +44,12 @@ class AttachCluster(object):
                     flag_found_n_masters = True
                     break
                 elif int(time.time() - start_time) < TIMEOUT_SECS:
-                    bar.update(POLL_INTERVAL)
+                    bar.update(time.time() - update_interval)
                     if log_counter % 3 == 0:
                         logger.info("{} of {} Master nodes active".format(current_active_masters, master_node_num))
                 elif int(time.time() - start_time) > TIMEOUT_SECS:
                     break
+                update_interval = time.time()
                 time.sleep(POLL_INTERVAL)
 
             # Success or failure... push the progress to 100%
@@ -214,4 +219,3 @@ class AttachCluster(object):
         if cnt >= num_retries:
             msg = "Failed to attach to cluster after {} attempts".format(num_retries)
             raise ClusterAttachFailed(msg)
-

@@ -239,10 +239,15 @@ def create(ctx, **kwargs):
         click.secho("Failed to create cluster {}. {}".format(
                     ctx.params['cluster_name'], e.msg), fg="red")
         sys.exit(1)
-
-    click.secho("Successfully created cluster {} "\
-                "using this node".format(ctx.params['cluster_name']),
-                fg="green")
+    response = ""
+    if len(master_ips) > 0:
+        response = response + "\n    masters: {}".format(master_ips)
+    if len(worker_ips) > 0:
+        response = response + "\n    workers: {}".format(worker_ips)
+    logger.info("Successfully created cluster {} "
+                "using node(s):{}".format(ctx.params['cluster_name'], response))
+    click.secho("Successfully created cluster {} "
+                "using node(s):{}".format(ctx.params['cluster_name'], response), fg="green")
 
 
 @cluster.command('bootstrap')

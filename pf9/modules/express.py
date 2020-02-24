@@ -140,16 +140,24 @@ class Get:
                 except_msg = "Failed reading {}: ".format(config_file)
                 logger.exception(except_err, except_msg)
                 raise CLIException(except_msg)
-
-            config = self.config_to_dict(config_file_lines)
-            if config is not None:
-                self.ctx.params['config_name'] = config["name"]
-                self.ctx.params['du_url'] = config["du_url"]
-                self.ctx.params['du_username'] = config["os_username"]
-                self.ctx.params['du_password'] = config["os_password"]
-                self.ctx.params['du_tenant'] = config["os_tenant"]
-                self.ctx.params['du_region'] = config["os_region"]
-            return self.ctx
+            try:
+                config = self.config_to_dict(config_file_lines)
+                if config is not None:
+                    if "name" in config:
+                        self.ctx.params['config_name'] = config["name"]
+                    else:
+                        self.ctx.params['config_name'] = (config["os_username"].
+                                                          split('@', 1)[0]) + '-' + config["du_url"]
+                    self.ctx.params['du_url'] = config["du_url"]
+                    self.ctx.params['du_username'] = config["os_username"]
+                    self.ctx.params['du_password'] = config["os_password"]
+                    self.ctx.params['du_tenant'] = config["os_tenant"]
+                    self.ctx.params['du_region'] = config["os_region"]
+                return self.ctx
+            except Exception as except_err:
+                except_msg = "Failed parsing active config {}: ".format(config_file)
+                logger.exception(except_err, except_msg)
+                raise CLIException(except_msg)
         except_msg = "No active config. Please define or activate a config."
         logger.exception(except_msg)
         raise CLIException(except_msg)

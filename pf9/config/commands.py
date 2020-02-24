@@ -3,6 +3,7 @@ import os
 import sys
 import shutil
 import click
+import re
 from prettytable import PrettyTable
 from ..exceptions import CLIException
 from ..exceptions import UserAuthFailure
@@ -21,18 +22,17 @@ def config(ctx):
 
 
 @config.command('create')
-@click.option('--config_name', '--name', required=True, prompt='Config name')
 @click.option('--du_url', '--du', required=True, prompt='Platform9 management URL')
 @click.option('--os_username', required=True, prompt='Platform9 user')
 @click.option('--os_password', required=True, prompt='Platform9 password', hide_input=True)
-@click.option('--os_region', required=True, prompt='Platform9 region')
+@click.option('--os_region', required=True, prompt='Platform9 region', default='RegionOne')
 @click.option('--os_tenant', required=True, prompt='Platform9 tenant', default='service')
 @click.pass_context
-def create(ctx, config_name, du_url, os_username, os_password, os_region, os_tenant):
+def create(ctx, du_url, os_username, os_password, os_region, os_tenant):
     """Create Platform9 management plane config."""
     # creates and activates pf9-express config file
     logger.info(msg=click.get_current_context().info_name)
-
+    config_name = (os_username.split('@', 1)[0]) + '-' + du_url
     pf9_exp_conf_dir = ctx.obj['pf9_db_dir']
 
     # Backup existing config if one exist
@@ -77,15 +77,18 @@ def config_list(obj):
     if os.path.exists(pf9_exp_conf_dir):
         count = 1
         result = PrettyTable()
-        result.field_names = ["#", "Active", "Conf", "Management Plane", "Region"]
-        files = [f for f in os.listdir(pf9_exp_conf_dir) if os.path.isfile(os.path.join(pf9_exp_conf_dir, f))]
-
+        result.field_names = ["#", "Active", "Conf Name", "Management Plane", "Region"]
+        files = [f for f in os.listdir(pf9_exp_conf_dir)
+                 if os.path.isfile(os.path.join(pf9_exp_conf_dir, f))
+                 if re.match('.*\.conf', f)]
         for f in files:
             active = False
             if f == 'express.conf':
                 active = True
             with open(pf9_exp_conf_dir + f, 'r') as config_file:
                 _config = Get.config_to_dict(config_file)
+                if "name" not in _config:
+                    _config["name"] = (_config["os_username"].split('@', 1)[0]) + '-' + _config["du_url"]
             if active:
                 result.add_row([count, '*', _config["name"], _config["du_url"], _config["os_region"]])
             else:
@@ -100,15 +103,20 @@ def config_list(obj):
 
 @config.command('activate')
 @click.argument('config_name')
-@click.pass_obj
-def activate(obj, config_name):
+@click.pass_context
+def activate(ctx, config_name):
     """Activate Platform9 management plane config."""
     # activates pf9-express config file
     logger.info(msg=click.get_current_context().info_name)
     logger.info(msg="Activating config %s" % config_name)
     click.echo("Activating config %s" % config_name)
-    exp_conf_dir = obj['pf9_db_dir']
-    exp_conf_file = obj['pf9_db_dir'] + 'express.conf'
+    exp_conf_dir = ctx.obj['pf9_db_dir']
+    exp_conf_file = ctx.obj['pf9_db_dir'] + 'express.conf'
+
+    # Get all config files
+    config_files = [f for f in os.listdir(exp_conf_dir)
+             if os.path.isfile(os.path.join(exp_conf_dir, f))
+             if re.match('.*\.conf', f)]
 
     if os.path.exists(exp_conf_file):
         with open(exp_conf_file, 'r') as current:
@@ -118,18 +126,32 @@ def activate(obj, config_name):
             if 'config_name|' in line:
                 line = line.strip()
                 name = line.replace('config_name|', '')
+                if name is config_name:
+                    logger.info(msg='Config {} is already active config'.format(config_name))
+                    click.echo('Config {} is already active config'.format(config_name))
+                    sys.exit(0)
+                else:
+                    # Active config exist, config_name exist. Not desired active config.
+                    # Backup existing active config
+                    active_config_name = name
+                    filename = name + '.conf'
+                    shutil.move(exp_conf_file, exp_conf_dir + filename)
 
-        filename = name + '.conf'
-        shutil.move(exp_conf_file, exp_conf_dir + filename)
-
-    files = [f for f in os.listdir(exp_conf_dir) if os.path.isfile(os.path.join(exp_conf_dir, f))]
-
-    for f in files:
-        if f == (config_name + '.conf'):
-            shutil.move(exp_conf_dir + f, exp_conf_file)
-
-    logger.info(msg='Config %s is now active' % config_name)
-    click.echo('Config %s is now active' % config_name)
+    # Since active config doesn't match, Check if config with that name exist
+    if (config_name + '.conf') in config_files:
+        shutil.move(exp_conf_dir + config_name + '.conf', exp_conf_file)
+        logger.info(msg='Config %s is now active' % config_name)
+        click.echo('Config %s is now active' % config_name)
+    else:
+        logger.info(msg='Config %s not found' % config_name)
+        click.echo('Config %s not found' % config_name)
+        if active_config_name:
+            logger.info(msg='Config %s remains active' % active_config_name)
+            click.echo('Config %s remains active' % active_config_name)
+            shutil.move(active_config_name, exp_conf_file)
+        else:
+            click.echo('Use an existing config or create a new one.')
+            ctx.invoke(list)
 
 
 @config.command('validate')
@@ -163,7 +185,15 @@ def config_validate(ctx):
         else:
             logger.info(msg="Config {} Validation Successful".format(ctx.params['config_name']))
             return token
-    except (UserAuthFailure, CLIException) as except_msg:
+    except UserAuthFailure as except_msg:
+        logger.exception("Authentication failure for config:[{}] to: {}".format(ctx.params['config_name'], except_msg))
+        click.echo("Authentication failure for config:[{}] to: {}".format(ctx.params['config_name'],
+                                                                          ctx.params["du_url"]))
+        sys.exit(1)
+    except CLIException as except_msg:
+        if "No active config" in except_msg.msg:
+            click.echo(except_msg.msg)
+            sys.exit(1)
         logger.exception("Config: {} Validation Failed. Exception: {}".format(ctx.params['config_name'], except_msg))
         click.echo("Validation of config:[{}] Failed to: {}".format(ctx.params['config_name'], ctx.params["du_url"]))
         sys.exit(1)
