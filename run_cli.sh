@@ -245,11 +245,28 @@ create_cli_config(){
     max_auth_retry=3
     while (( ${auth_retry} < ${max_auth_retry} )); do
 	(( auth_retry++ ))
+	echo ""
+	echo ""
 	stdout_log "Please provide your Platform9 Credentials:"
 	if [ $auth_retry -gt 1 ]; then 
 	    stdout_log "Attempt $auth_retry of ${max_auth_retry}:"; fi
 	eval "${cli_exec}" config create
-	if $(eval "${cli_exec}" config validate); then break; else debugging "Config creation failed"; fi
+	
+	if (${cli_exec} config validate); then
+	    break
+	else
+	    debugging "Config creation failed"
+	    if (( $auth_retry == $max_auth_retry )); then
+                echo ""
+                stdout_log "Max Authentication Attempts Reached."
+		stdout_log "You can retry entering your credentials with:"
+		echo "    ${cli_exec} config create --help"
+		eval "${cli_exec}" config create --help
+                echo ""
+                echo ""
+                echo ""
+	    fi
+	fi
     done
 }
 
@@ -331,9 +348,14 @@ fi
 
 # call cli config create which will prompt user to provide PF9 credentials.
 create_cli_config
-
+echo ""
+echo ""
+echo ""
+echo ""
+stdout_log "Platform9 Express Management Suite installation completed successfully"
+echo ""
 echo "Please find the pf9ctl documentation here: https://docs.platform9.com/kubernetes/PMK-CLI/"
-echo "To start building a Kubernetes cluster: $ ${cli_exec} cluster --help"
+echo "To start building a Kubernetes cluster you can execute:"
+echo "        ${cli_exec} cluster --help"
 echo ""
 eval "${cli_exec}" cluster --help
-debugging "Installation completed successfully"

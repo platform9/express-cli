@@ -33,8 +33,17 @@ def create(ctx, du_url, os_username, os_password, os_region, os_tenant):
     # creates and activates pf9-express config file
     logger.info(msg=click.get_current_context().info_name)
     pf9_exp_conf_dir = ctx.obj['pf9_db_dir']
+    if not du_url.startswith('http'):
+        ctx.params['du_url'] = "https://{}".format(du_url)
+    elif du_url.startswith('http://'):
+        ctx.params['du_url'] = du_url.replace('http', 'https')
+    elif not du_url.startswith('https://'):
+        exit_msg = "Platform9 management URL must be in form of 'https://....'"
+        logger.info(exit_msg)
+        click.echo(exit_msg)
+        sys.exit(1)
     ctx.params['config_name'] = (ctx.params["os_username"].split('@', 1)[0]) \
-                                + '-' + re.search("//(.*?)$", ctx.params["du_url"]).group(1)
+                                 + '-' + re.search("//(.*?)$", ctx.params["du_url"]).group(1)
     # Backup existing config if one exist
     if os.path.exists(pf9_exp_conf_dir + 'express.conf'):
         with open(pf9_exp_conf_dir + 'express.conf', 'r') as current:
