@@ -32,22 +32,28 @@ def create(ctx, du_url, os_username, os_password, os_region, os_tenant):
     """Create Platform9 management plane config."""
     # creates and activates pf9-express config file
     logger.info(msg=click.get_current_context().info_name)
-    config_name = (os_username.split('@', 1)[0]) + '-' + du_url
     pf9_exp_conf_dir = ctx.obj['pf9_db_dir']
-
+    ctx.params['config_name'] = (ctx.params["os_username"].split('@', 1)[0]) \
+                                + '-' + re.search("//(.*?)$", ctx.params["du_url"]).group(1)
     # Backup existing config if one exist
     if os.path.exists(pf9_exp_conf_dir + 'express.conf'):
         with open(pf9_exp_conf_dir + 'express.conf', 'r') as current:
-            lines = current.readlines()
+            current_config = Get.config_to_dict(current)
             current.close()
-        for line in lines:
-            if 'config_name|' in line:
-                line = line.strip()
-                name = line.replace('config_name|', '')
-
-        filename = name + '.conf'
-        shutil.copyfile(pf9_exp_conf_dir + 'express.conf', pf9_exp_conf_dir + filename)
-
+            if "name" not in current_config:
+                current_config["name"] = (current_config["os_username"].split('@', 1)[0]) \
+                                         + '-' + re.search("//(.*?)$", current_config["du_url"]).group(1)
+        if current_config["name"] == ctx.params['config_name']:
+            logger.info("Updating existing active config. "
+                        "New config name: {} matches existing config name: {}".format(
+                         current_config["name"], ctx.params['config_name']))
+            click.echo("Updating existing active config. "
+                       "New config name: {} matches existing config name: {}".format(
+                        current_config["name"], ctx.params['config_name']))
+        else:
+            logger.info("Creating backup of existing active config: {}".format(current_config['name']))
+            filename = current_config["name"] + '.conf'
+            shutil.copyfile(pf9_exp_conf_dir + 'express.conf', pf9_exp_conf_dir + filename)
     if not os.path.exists(pf9_exp_conf_dir):
         try:
             access_rights = 0o700
@@ -56,14 +62,13 @@ def create(ctx, du_url, os_username, os_password, os_region, os_tenant):
             logger.exception(except_err)
             click.echo("Creation of the directory %s failed" % pf9_exp_conf_dir)
         else:
+            logger.info("Successfully created the directory %s " % pf9_exp_conf_dir)
             click.echo("Successfully created the directory %s " % pf9_exp_conf_dir)
-
     with open(ctx.obj['exp_config_file'], 'w') as file:
-        for k,v in ctx.params.items():
+        for k, v in ctx.params.items():
             file.write(k + '|' + str(v) + '\n')
-            if k == 'config_name':
-                config_name = v
-    logger.info('Successfully wrote config: {}'.format(config_name))
+
+    logger.info('Successfully wrote config: {}'.format(ctx.params['config_name']))
     click.echo('Successfully wrote Platform9 management plane configuration')
 
 
@@ -88,7 +93,8 @@ def config_list(obj):
             with open(pf9_exp_conf_dir + f, 'r') as config_file:
                 _config = Get.config_to_dict(config_file)
                 if "name" not in _config:
-                    _config["name"] = (_config["os_username"].split('@', 1)[0]) + '-' + _config["du_url"]
+                    _config["name"] = (_config["os_username"].split('@', 1)[0]) \
+                                      + '-' + '-' + re.search("//(.*?)$", _config["du_url"]).group(1)
             if active:
                 result.add_row([count, '*', _config["name"], _config["du_url"], _config["os_region"]])
             else:
