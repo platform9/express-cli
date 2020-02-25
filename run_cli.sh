@@ -193,7 +193,8 @@ setup_pf9_bash_profile() {
     debugging "Using $bash_config to source ${pf9_bash_profile}"
 
     debugging "Writing pf9_bash_profile to: ${pf9_bash_profile}"
-    cat "pf9_bin=$(dirname $(realpath .))" > ${pf9_bash_profile}
+    echo "pf9_bin=${pf9_bin}" > ${pf9_bash_profile}
+    debugging "pf9_bin=$(dirname $(realpath .))"
 
     cat <<'EOT' >> ${pf9_bash_profile}
 if [[ -d "${pf9_bin}" ]]; then
