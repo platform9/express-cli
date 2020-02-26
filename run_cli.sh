@@ -189,13 +189,18 @@ setup_pf9_bash_profile() {
 	bash_config=$(realpath ~/.profile)
     else
 	bash_config=$(realpath ~/.bashrc)
+	if ! touch "${bash_config}" > /dev/null 2>&1; then
+	    debugging "Failed to create ${bash_config}, BASH profile not setup"; fi
     fi
     debugging "Using $bash_config to source ${pf9_bash_profile}"
 
     debugging "Writing pf9_bash_profile to: ${pf9_bash_profile}"
+    # Write pf9_bin=${pf9_bin} to the bash_profile as this needs variable expansion
     echo "pf9_bin=${pf9_bin}" > ${pf9_bash_profile}
     debugging "pf9_bin=$(dirname $(realpath .))"
-
+    # Write the rest of the bash_profile. 
+    # This is done in 2 steps as only the first line needs variable expansion.
+    # The rest of the file must be written with variable test intact.
     cat <<'EOT' >> ${pf9_bash_profile}
 if [[ -d "${pf9_bin}" ]]; then
     if ! echo "$PATH" | grep -q "${pf9_bin}"; then
