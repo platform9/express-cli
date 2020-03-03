@@ -164,6 +164,7 @@ def cluster():
               help="Taint master nodes (to enable workloads)")
 @click.option("--networkPlugin", type=str, required=False, default='flannel',
               help="Specify network plugin (Possible values: flannel or calico, Default: flannel)")
+@click.option('--floating-ip', '-f', multiple=True, hidden=True)
 @click.pass_context
 def create(ctx, **kwargs):
     """Create a Kubernetes cluster. Read more at http://pf9.io/cli_clcreate."""
@@ -272,6 +273,7 @@ def create(ctx, **kwargs):
               help="Taint master nodes (to enable workloads)")
 @click.option("--networkPlugin", type=str, required=False, default='flannel',
               help="Specify network plugin (Possible values: flannel or calico, Default: flannel)")
+@click.option('--floating-ip', '-f', multiple=True, hidden=True)
 @click.pass_context
 def bootstrap(ctx, **kwargs):
     """
@@ -297,7 +299,7 @@ def bootstrap(ctx, **kwargs):
 
         local_ip = get_local_node_addresses()
         # To attach nodes, we have to find the node uuid from the DU based on
-        # the IP address. This cannot be localhost, 127.0.0.1. We handle it by 
+        # the IP address. This cannot be localhost, 127.0.0.1. We handle it by
         # getting all the non local IPs and picking the first one
         # Attach nodes
         attach_cluster(ctx.params['cluster_name'], (local_ip[0],), None, ctx)
@@ -319,6 +321,7 @@ def bootstrap(ctx, **kwargs):
               help='IP of the node to be added as masters, Specify multiple IPs by repeating this option.')
 @click.option('--worker-ip', '-w', multiple=True,
               help='IP of the node to be added as workers. Specify multiple IPs by repeating this option.')
+@click.option('--floating-ip', '-f', multiple=True, hidden=True)
 @click.pass_context
 def attach_node(ctx, **kwargs):
     """
@@ -370,9 +373,10 @@ def attach_node(ctx, **kwargs):
               help='SSH key for nodes.')
 @click.option('--ips', '-i', multiple=True,
               help='IPs of the host to be prepared. Specify multiple IPs by repeating this option.')
+@click.option('--floating-ip', '-f', multiple=True, hidden=True)
 @click.pass_context
 def prepnode(ctx, user, password, ssh_key, ips):
-    """ 
+    """
     Prepare a node to be ready to be added to a Kubernetes cluster. Read more at http://pf9.io/cli_clprep.
     """
     logger.info(msg=click.get_current_context().info_name)

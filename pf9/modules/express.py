@@ -216,6 +216,17 @@ class PrepExpressRun:
         self.ips = ips
         self.node_prep_only = node_prep_only
         self.inv_file_template = inv_file_template
+        if self.ctx.params['floating_ip']:
+            floating_ips=ctx.params['floating_ip']
+            ctx.params['floating_ip'] = ''.join(floating_ips).split(' ') if all(len(x) == 1
+                                                                                for x in floating_ips
+                                                                                ) else list(floating_ips)
+            if len(self.ctx.params['floating_ip']) == len(self.ips):
+                self.ips = self.ctx.params['floating_ip']
+                logger.info("Configuring node(s) via Floating IP(s): {}".format(self.ips))
+            else:
+                except_msg = "Number of floating IPs does not match nodes provided"
+                raise CLIException(except_msg)
 
     def build_ansible_command(self):
         """Build the bash command that will be sent to pf9-express"""
