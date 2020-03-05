@@ -158,7 +158,7 @@ def cluster():
               help="External DNS name for master VIP")
 @click.option('--privileged', type=bool, required=False, default=True,
               help="Enable privileged mode for Kubernetes API")
-@click.option('--appCatalogEnabled', type=bool, required=False, default=True,
+@click.option('--appCatalogEnabled', type=bool, required=False, default=False, hidden=True,
               help="Enable Helm application catalog")
 @click.option('--allowWorkloadsOnMaster', type=bool, required=False, default=False,
               help="Taint master nodes (to enable workloads)")
