@@ -254,7 +254,7 @@ class PrepExpressRun:
                       self.ctx.params['du_region'],
                       self.ctx.params['du_tenant'],
                       self.ctx.params['token'])
-        cmd = '{} -i {} -l pmk {} {}' \
+        cmd = '{} -vv -i {} -l pmk {} {}' \
               .format(
                       self.ctx.obj['pf9_exec_ansible-playbook'],
                       _inv_file,
