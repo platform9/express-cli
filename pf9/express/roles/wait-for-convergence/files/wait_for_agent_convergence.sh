@@ -3,6 +3,7 @@
 # Wait for pf9-hostagent to complete convergence
 ####################################################################################################
 
+echo "running: $0 $*"
 basedir=$(dirname $0)
 TIMEOUT=900
 flag_k8s=0
@@ -40,6 +41,7 @@ echo "--> flag_k8s=${flag_k8s}"
 start_time=`date +%s`
 elapsedTime=0
 while [ ${elapsedTime} -lt ${TIMEOUT} ]; do
+  echo "in-while: checking resmgr status"
   role_status=$(curl -s -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
       https://${du_fqdn}/resmgr/v1/hosts/${host_id} | eval "${role_filter}")
 
