@@ -27,7 +27,7 @@ class AttachCluster(object):
 
     def wait_for_n_active_masters(self, master_node_num):
         if master_node_num == 1:
-            TIMEOUT_SECS = 600
+            TIMEOUT_SECS = 900
         else:
             TIMEOUT_SECS = 900
         POLL_INTERVAL = 10  # in secs
