@@ -4,7 +4,7 @@
 ####################################################################################################
 
 basedir=$(dirname $0)
-TIMEOUT=900
+TIMEOUT=1200
 flag_k8s=0
 
 usage() {
@@ -43,6 +43,7 @@ while [ ${elapsedTime} -lt ${TIMEOUT} ]; do
   role_status=$(curl -s -k -H "Content-Type: application/json" -H "X-Auth-Token: ${token}" \
       https://${du_fqdn}/resmgr/v1/hosts/${host_id} | eval "${role_filter}")
 
+  echo "role_status=${role_status}"
   if [ "${role_status}" == "ok" ]; then break; fi
   # update elapsed time
   current_t=`date +%s`; elapsedTime=$((current_t - start_time))
