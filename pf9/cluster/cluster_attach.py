@@ -23,7 +23,7 @@ class AttachCluster(object):
         self.token = ctx.params['token']
         self.du_url = ctx.params['du_url']
         self.cluster_name = ctx.params['cluster_name']
-        self.headers = { 'content-type': 'application/json', 'X-Auth-Token': self.token }
+        self.headers = {'content-type': 'application/json', 'X-Auth-Token': self.token}
 
     def wait_for_n_active_masters(self, master_node_num):
         if master_node_num == 1:

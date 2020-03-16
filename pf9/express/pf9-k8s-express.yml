@@ -7,14 +7,8 @@
 
 # All Kubernetes Nodes
 - hosts:
-    - k8s_master
     - k8s_worker
   tasks:
-    - name: get auth token if not provided
-      include_role:
-        name: pf9-auth
-        public: yes
-      when: (du_token is not defined) or (du_token|length == 0)
     - include_role:
         name: "{{ role }}" 
         public: yes
@@ -27,15 +21,6 @@
       loop_control: 
         loop_var: role
 
-# Kubernetes Master Nodes
-- hosts: k8s_master
-  become: true
-  roles:
-    - { role: "wait-for-convergence", flags: "k8s", when: autoreg == "on" }
-    - { role: "k8s-assign-role", rolename: "pf9-kube", when: autoreg == "on" }
-    - { role: "wait-for-convergence", when: autoreg == "on" }
-    - { role: "k8s-cluster-attach", k8s_node_type: "master", when: autoreg == "on" }
-
 # Kubernetes Worker Nodes
 - hosts: k8s_worker
   become: true
@@ -43,4 +28,3 @@
     - { role: "wait-for-convergence", flags: "k8s", when: autoreg == "on" }
     - { role: "k8s-assign-role", rolename: "pf9-kube", when: autoreg == "on" }
     - { role: "wait-for-convergence", when: autoreg == "on" }
-    - { role: "k8s-cluster-attach", k8s_node_type: "worker", when: autoreg == "on" }

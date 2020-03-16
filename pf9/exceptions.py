@@ -20,3 +20,8 @@ class DUCommFailure(CLIException):
 class UserAuthFailure(CLIException):
     def __init__(self, msg):
         super(UserAuthFailure, self).__init__(msg)
+
+
+class FileLockException(CLIException):
+    def __init__(self, msg):
+        super(FileLockException, self).__init__(msg)

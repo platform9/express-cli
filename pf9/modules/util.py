@@ -1,7 +1,9 @@
+import os
+import time
 import requests
-from ..exceptions import CLIException
 import socket
 import logging
+from pf9.exceptions import CLIException, FileLockException
 from logging.handlers import TimedRotatingFileHandler
 
 
@@ -28,6 +30,47 @@ class Logger:
         logger.addHandler(self.get_file_handler())
         logger.propagate = False
         return logger
+
+
+class Lock:
+    """File locking to protect concurrent write access"""
+    TIMEOUT = 10
+
+    def __init__(self, file_to_lock):
+        self.file_to_lock = file_to_lock
+        # NOT TESTED!!!!!
+        self.lock_file = os.path.join(self.file_to_lock + '.lock')
+
+    def lock_assert(self, except_msg=None):
+        self.release_lock()
+        raise FileLockException(except_msg)
+
+    def get_lock(self):
+        cur_time = time.time()
+        timeout_start = cur_time
+        end_time = timeout_start + self.TIMEOUT
+        while cur_time < end_time:
+            try:
+                os.mkdir(self.lock_file)
+                break
+            except Exception:
+                time.sleep(1)
+            cur_time = time.time()
+
+        # enforce timeout
+        if cur_time >= end_time:
+            self.lock_assert("ERROR: failed to get lock: {} - TIMEOUT EXCEEDED".format(self.lock_file))
+        if not os.path.isdir(self.lock_file):
+            self.lock_assert("ERROR: failed to get lock: {}".format(self.lock_file))
+
+    def release_lock(self):
+        if os.path.isdir(self.lock_file):
+            try:
+                os.rmdir(self.lock_file)
+            except Exception as except_msg:
+                self.lock_assert("ERROR: failed to release lock: {}".format(self.lock_file))
+        if os.path.isfile(self.lock_file):
+            self.lock_assert("ERROR: failed to release lock: {}".format(self.lock_file))
 
 
 class Pf9ExpVersion:
