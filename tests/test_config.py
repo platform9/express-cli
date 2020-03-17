@@ -23,20 +23,15 @@ class TestConfigCreateFull(TestCase):
         """Setup mock env"""
         cls.log = logging.getLogger('Running setUp for: '+ inspect.currentframe().f_code.co_name)
         cls.temp_dir = tempfile.mkdtemp()
-        os.makedirs(os.path.join(cls.temp_dir, 'pf9/pf9-express/'), 0o755)
-        cls.conf_dir = os.path.join(cls.temp_dir, 'pf9/pf9-express/config/')
+        os.makedirs(os.path.join(cls.temp_dir, 'pf9/'), 0o755)
+        cls.conf_dir = os.path.join(cls.temp_dir, 'pf9/db/')
         os.makedirs(cls.conf_dir, 0o755)
-        cls.obj_test = dict({'pf9_exp_conf_dir': cls.conf_dir})
-        cls.expected_config = '''
-                config_name|test
-                os_region|region1
+        cls.obj_test = dict({'pf9_db_dir': cls.conf_dir,
+                             'exp_config_file': os.path.join(cls.conf_dir, 'express.conf')})
+        cls.expected_config = '''os_region|region1
                 os_username|test.user@platform9.com
                 proxy_url|-
-                dns_resolver1|1.1.1.1
-                dns_resolver2|2.2.2.2
-                du_url|test.user@platform9.com
-                manage_hostname|TRUE
-                manage_resolver|True
+                du_url|test.platform9.com
                 os_password|testpass
                 os_tenant|service
                 '''
@@ -51,17 +46,11 @@ class TestConfigCreateFull(TestCase):
         runner = CliRunner()
             #result = runner.invoke(cli_config_create, obj=self.obj_test)
         result = runner.invoke(cli_config_create,
-                               ['--name=test',
-                                '--du_url=test@platform9.com',
+                               ['--du_url=test.platform9.com',
                                 '--os_username=test.user@platform9.com',
                                 '--os_password=testpass',
                                 '--os_region=region1',
-                                '--os_tenant=service',
-                                '--proxy_url=-',
-                                '--manage_hostname=TRUE',
-                                '--manage_resolver=True',
-                                '--dns_resolver1=1.1.1.1',
-                                '--dns_resolver2=2.2.2.2'],
+                                '--os_tenant=service'],
                                obj=self.obj_test)
         assert result.exit_code == 0
         assert 'Successfully wrote Platform9 management plane configuration' in result.output
@@ -83,20 +72,15 @@ class TestConfigCreateMinimal(TestCase):
         """Setup mock env"""
         cls.log = logging.getLogger('Running setUp for: '+ inspect.currentframe().f_code.co_name)
         cls.temp_dir = tempfile.mkdtemp()
-        os.makedirs(os.path.join(cls.temp_dir, 'pf9/pf9-express/'), 0o755)
-        cls.conf_dir = os.path.join(cls.temp_dir, 'pf9/pf9-express/config/')
+        os.makedirs(os.path.join(cls.temp_dir, 'pf9/'), 0o755)
+        cls.conf_dir = os.path.join(cls.temp_dir, 'pf9/db/')
         os.makedirs(cls.conf_dir, 0o755)
-        cls.obj_test = dict({'pf9_exp_conf_dir': cls.conf_dir})
-        cls.expected_config = '''
-                config_name|test
-                os_region|region1
+        cls.obj_test = dict({'pf9_db_dir': cls.conf_dir,
+                             'exp_config_file': os.path.join(cls.conf_dir, 'express.conf')})
+        cls.expected_config = '''os_region|region1
                 os_username|test.user@platform9.com
                 proxy_url|-
-                dns_resolver1|8.8.8.8
-                dns_resolver2|8.8.4.4
-                du_url|test.user@platform9.com
-                manage_hostname|False
-                manage_resolver|False
+                du_url|test.platform9.com
                 os_password|testpass
                 os_tenant|service
                 '''
@@ -110,8 +94,7 @@ class TestConfigCreateMinimal(TestCase):
         """Test creating a config with args"""
         runner = CliRunner()
         result = runner.invoke(cli_config_create,
-                               ['--name=test',
-                                '--du_url=test@platform9.com',
+                               ['--du_url=test.platform9.com',
                                 '--os_username=test.user@platform9.com',
                                 '--os_password=testpass',
                                 '--os_region=region1',
@@ -129,19 +112,15 @@ class TestConfigList(TestCase):
         """Setup mock env"""
         cls.log = logging.getLogger('Running setUp for: '+ inspect.currentframe().f_code.co_name)
         cls.temp_dir = tempfile.mkdtemp()
-        os.makedirs(os.path.join(cls.temp_dir, 'pf9/pf9-express/'), 0o755)
-        cls.conf_dir = os.path.join(cls.temp_dir, 'pf9/pf9-express/config/')
-        cls.obj_test = dict({'pf9_exp_conf_dir': cls.conf_dir})
+        os.makedirs(os.path.join(cls.temp_dir, 'pf9/'), 0o755)
+        cls.conf_dir = os.path.join(cls.temp_dir, 'pf9/db/')
+        cls.obj_test = dict({'pf9_db_dir': cls.conf_dir,
+                             'exp_config_file': os.path.join(cls.conf_dir, 'express.conf')})
         cls.express_config = '''
-                config_name|test
                 os_region|region1
                 os_username|test.user@platform9.com
                 proxy_url|-
-                dns_resolver1|1.1.1.1
-                dns_resolver2|2.2.2.2
-                du_url|test.user@platform9.com
-                manage_hostname|TRUE
-                manage_resolver|True
+                du_url|https://test.platform9.com
                 os_password|testpass
                 os_tenant|service
                 '''
@@ -175,4 +154,4 @@ class TestConfigList(TestCase):
         runner = CliRunner()
         result = runner.invoke(cli_config_list, obj=self.obj_test)
         assert result.exit_code == 0
-        assert 'test.user@platform9.com' in result.output
+        assert 'test.platform9.com' in result.output
