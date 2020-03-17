@@ -1,12 +1,6 @@
-import re
+from ..exceptions import SSHInfoMissing, MissingVIPDetails
 import netifaces
-from .exceptions import SSHInfoMissing, MissingVIPDetails
-
-
-def print_help_msg(command):
-    """Print Command's Help message"""
-    with click.Context(command) as ctx:
-        click.echo(command.get_help(ctx))
+import re
 
 
 def validate_ssh_details(user, password, ssh_key):

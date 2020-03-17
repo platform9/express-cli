@@ -7,7 +7,7 @@ from prettytable import PrettyTable
 def inventory():
     """Manage Platform9 Express Inventories"""
 
-@inventory.command('list')
+@config.command('list')
 @click.pass_obj
 def list(obj):
     """List Platform9 Express Inventories."""

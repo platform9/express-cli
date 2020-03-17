@@ -1,28 +1,12 @@
 """Packaging settings."""
 
-import sys
-import os
+
 from codecs import open
 from subprocess import call
 
 from setuptools import Command, find_packages, setup
 
 from pf9 import __version__
-
-from os import path
-this_directory = path.abspath(path.dirname(__file__))
-with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
-    long_description = f.read()
-
-# set env_vars for python intpretor that was used for install
-py_env = sys.prefix
-os.environ["EXPRESS_CLI_PYTHON"] = str(sys.executable) 
-os.environ["EXPRESS_CLI_VENV"] = str(py_env) 
-os.environ["EXPRESS_CLI_VENV_ACTIVATE"] = "{}/bin/activate".format(py_env)
-
-# The above values should be written to a config file in ~/pf9/bin/
-# sym links to the venv/activate and entry points should be created there
-# User's PATH should be updated to include ~/pf9/bin/ with entry in ~/.bashrc or ~/.bash_profile
 
 
 class RunTests(Command):
@@ -38,7 +22,7 @@ class RunTests(Command):
 
     def run(self):
         """Run all tests!"""
-        errno = call('py.test')
+        errno = call(['py.test', '--cov=pf9', '--cov-report=term-missing'])
         raise SystemExit(errno)
 
 
@@ -60,9 +44,17 @@ setup(
         'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
         'Operating System :: OS Independent',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.2',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
     ],
+    package_data={
+        'pf9':['templates/*',],
+    },
     include_package_data=True,
     zip_safe=False,
     keywords='cli',
@@ -75,8 +67,7 @@ setup(
                       'urllib3',
                       'paramiko',
                       'fabric',
-                      'invoke',
-                      'ansible'
+                      'invoke'
                       ],
     extras_require={
         'test': ['coverage', 'pytest', 'pytest-cov', 'mock'],

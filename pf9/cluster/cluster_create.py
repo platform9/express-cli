@@ -4,12 +4,7 @@ import time
 import requests
 import json
 import click
-from pf9.modules.util import Logger
-from pf9.cluster.exceptions import ClusterCreateFailed
-from pf9.cluster.exceptions import ClusterNotAvailable
-
-logger = Logger(os.path.join(os.path.expanduser("~"), 'pf9/log/pf9ctl.log')).get_logger(__name__)
-
+from ..exceptions import ClusterCreateFailed
 
 class CreateCluster(object):
     def __init__(self, ctx):
@@ -19,11 +14,19 @@ class CreateCluster(object):
         self.du_url = ctx.params['du_url']
         self.cluster_name = ctx.params['cluster_name']
         self.headers = { 'content-type': 'application/json', 'X-Auth-Token': self.token }
+        control_plane_pause = 30
+
+
+    def fail_bootstrap(self, m):
+        if m != None:
+            click.echo("ERROR: {}\n".format(m))
+        sys.exit(1)
+
 
     def write_host(self, m):
         if m != None:
-            logger.info("{}".format(m))
             click.echo("{}".format(m))
+
 
     def get_nodepool_id(self):
         try:
@@ -40,16 +43,15 @@ class CreateCluster(object):
 
             for item in json_response:
                 if item['type'] == 'local':
-                    return item['nodePoolUuid']
-        except Exception as except_err:
-            logger.exception(except_err)
+                    return(item['nodePoolUuid'])
+        except Exception as ex:
             return None
+
 
     def create_cluster(self):
         nodepool_id = self.get_nodepool_id()
         if nodepool_id == None:
-            except_msg = "failed to get nodepool_id for cloud provider"
-            raise ClusterCreateFailed(except_msg)
+            self.fail_bootstrap("failed to get nodepool_id for cloud provider")
         self.write_host("Using nodepool id: {}".format(nodepool_id))
 
         # configure cluster
@@ -75,38 +77,45 @@ class CreateCluster(object):
         # create cluster (post to qbert)
         try:
             api_endpoint = "qbert/v3/{}/clusters".format(self.project_id)
-            pf9_response = requests.post("{}/{}".format(self.du_url, api_endpoint),
-                                         headers=self.headers, data=json.dumps(cluster_create_payload))
-        except Exception as except_err:
-            except_msg = "Failed to create cluster: {}".format(except_err)
-            logger.exception(except_msg)
-            raise ClusterCreateFailed(except_msg)
+            pf9_response = requests.post("{}/{}".format(self.du_url,api_endpoint), headers=self.headers, data=json.dumps(cluster_create_payload))
+        except Exception as e:
+            msg = "Failed to create cluster: {}".format(e)
+            self.fail_bootstrap(msg)
+            raise ClusterCreateFailed(msg)
 
         # parse resmgr response
         try:
             json_response = json.loads(pf9_response.text)
-        except Exception as except_err:
-            except_msg = "Cluster created, but response did not include the cluster uuid: {}".format(except_err)
-            logger.exception(except_msg)
-            raise ClusterCreateFailed(except_msg)
+        except:
+            msg = "Cluster created, but response did not include the cluster uuid"
+            self.fail_bootstrap(msg)
+            raise ClusterCreateFailed(msg)
 
         return json_response['uuid']
+
 
     def cluster_exists(self):
         try:
             api_endpoint = "qbert/v3/{}/clusters".format(self.project_id)
-            pf9_response = requests.get("{}/{}".format(self.du_url, api_endpoint), headers=self.headers)
+            pf9_response = requests.get("{}/{}".format(self.du_url,api_endpoint), headers=self.headers)
             if pf9_response.status_code != 200:
                 return False, None
-            json_response = json.loads(pf9_response.text)
-            for item in json_response:
-                if item['name'] == self.cluster_name:
-                    return True, item['uuid']
-        except Exception as except_err:
-            logger.exception(except_err)
+        except:
             return False, None
+
+        # parse response
+        try:
+            json_response = json.loads(pf9_response.text)
+        except:
+            return False, None
+
+        for item in json_response:
+            if item['name'] == self.cluster_name:
+                return(True, item['uuid'])
+
         # final return
         return False, None
+
 
     def wait_for_cluster(self):
         TIMEOUT = 5
@@ -118,18 +127,17 @@ class CreateCluster(object):
         while True:
             cluster_status, cluster_uuid = self.cluster_exists()
             self.write_host("Waiting for cluster create to complete, status = {}".format(cluster_status))
-            if cluster_status:
+            if cluster_status == True:
                 flag_cluster_exists = True
                 break
             elif int(time.time()) > timeout:
                 break
-            time.sleep(POLL_INTERVAL)
+            else:
+                time.sleep(POLL_INTERVAL)
 
         # enforce TIMEOUT
         if not flag_cluster_exists:
-            except_msg = "TIMEOUT: waiting for cluster to be created (qbert)"
-            logger.exception(except_msg)
-            raise ClusterNotAvailable(except_msg)
+            self.fail_bootstrap("TIMEOUT: waiting for cluster to be created (qbert)")
 
         # return cluster uuid
         return cluster_uuid
