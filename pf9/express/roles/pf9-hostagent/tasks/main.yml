@@ -1,0 +1,19 @@
+---
+- name: Check if the certless installer is available
+  uri:
+    url: "https://{{du_fqdn}}/clarity/platform9-install-{{ansible_os_family|lower}}.sh"
+    method: "HEAD"
+    status_code: [200, 404]
+    timeout: 30 
+  register: result
+
+- name: Set if certless installer to true
+  set_fact:
+    is_certless_installer: "true"
+  when: result.status == 200
+
+- include_tasks: classic-hostagent-setup.yml
+  when: is_certless_installer is undefined
+
+- include_tasks: certless-hostinstaller-setup.yml
+  when: is_certless_installer is defined
