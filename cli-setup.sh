@@ -4,9 +4,11 @@
 #
 # Example:
 #    Deploy and run cli against master
-#         ./run_cli.sh
+#         ./cli-setup.sh
+#    Deploy and run cli against master
+#         ./cli-setup.sh
 #    Local deployment using the current branch debugging enabled (DEVELOPMENT ONLY!)
-#         ./pf9ctl.sh -l -d -b=$(git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
+#         ./cli-setup.sh -l -d -b=$(git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
 #
 ####################################################################################################
 
@@ -88,6 +90,10 @@ parse_args() {
 	    ;;
 	-d|--debug)
 	    debug_flag="${i#*=}"
+	    shift
+	    ;;
+	--install_only)
+	    install_only=TRUE
 	    shift
 	    ;;
 	--dev)
@@ -290,7 +296,13 @@ initialize_basedir
 debugging "CLFs: $*"
 
 # Set global variables
-if [ -z ${branch} ]; then branch=master; fi
+	
+if [ -z ${branch} ]; then
+    branch=$(git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
+    if [ $? -ne 0 ]; then
+	branch=master
+    fi
+fi
 debugging "Setting environment variables to be passed to installers"
 
 if [[ -z ${run_local} && -z ${dev_build} ]]; then
@@ -350,9 +362,10 @@ setup_pf9_bash_profile
 if [[ ${bash_config} ]]; then
     eval source "${bash_config}" 
 fi
-
-# call cli config create which will prompt user to provide PF9 credentials.
-create_cli_config
+if ! [[ -n ${install_only} ]]; then
+    # call cli config create which will prompt user to provide PF9 credentials.
+    create_cli_config
+fi
 echo ""
 echo ""
 echo ""
