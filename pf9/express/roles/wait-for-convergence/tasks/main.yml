@@ -15,7 +15,7 @@
 
 - name: INFO starting wait_for_agent_convergence
   debug: 
-    msg: "running wait_for_agent_convergence.sh {{du_fqdn}} {{host_id.stdout.strip()}} <{{flags}}>"
+    msg: "running wait_for_agent_convergence.sh {{du_fqdn}} {{host_id.stdout.strip()}} {{du_token}} {{flags}}"
 
 - name: wait for pf9-hostagent to converge
   script: "files/wait_for_agent_convergence.sh {{du_fqdn}} {{host_id.stdout.strip()}} {{du_token}} {{flags}}"
