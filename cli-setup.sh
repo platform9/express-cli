@@ -55,7 +55,7 @@ install_pip_prereqs() {
 
         ## install additional pip-based packages
         write_out_log "Installing dependencies from pypi in ${cli_setup_dir}"
-        for pkg in openstacksdk; do
+        for pkg in 'openstacksdk<=0.43.0'; do
             sudo ${cli_setup_dir}/bin/pip install ${pkg} --ignore-installed >> ${log} 2>&1
             if [ $? -ne 0 ]; then
             echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
