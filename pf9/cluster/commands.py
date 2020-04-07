@@ -13,6 +13,7 @@ from pf9.cluster.exceptions import PrepNodeFailed, ClusterNotAvailable, ClusterA
 from pf9.cluster.helpers import validate_ssh_details, get_local_node_addresses, check_vip_needed, print_help_msg
 from pf9.cluster.cluster_create import CreateCluster
 from pf9.cluster.cluster_attach import AttachCluster
+from ..modules.express import Get
 
 logger = Logger(os.path.join(os.path.expanduser("~"), 'pf9/log/pf9ctl.log')).get_logger(__name__)
 
@@ -88,6 +89,8 @@ def attach_cluster(cluster_name, master_ips, worker_ips, ctx):
                     ctx.params['cluster_name']), fg="red")
         sys.exit(1)
 
+    master_nodes = None
+    worker_nodes = None
     if master_ips:
         master_nodes = cluster_attacher.get_uuids(master_ips)
         logger.info("Discovering UUIDs for the cluster's master nodes")
@@ -109,12 +112,9 @@ def attach_cluster(cluster_name, master_ips, worker_ips, ctx):
             logger.info("{}".format(node))
             click.echo("{}".format(node))
 
-    #TODO: Why is this even required??
-    cluster_uuid = CreateCluster(ctx).wait_for_cluster()
-
     # attach master nodes
     #TODO: Likely needs a progress bar?
-    if master_ips:
+    if master_nodes:
         try:
             cluster_attacher.attach_to_cluster(cluster_uuid, 'master', master_nodes)
             cluster_attacher.wait_for_n_active_masters(len(master_nodes))
@@ -122,7 +122,7 @@ def attach_cluster(cluster_name, master_ips, worker_ips, ctx):
             logger.exception(except_err)
             click.echo("Failed attaching master node(s) to cluster: {}".format(except_err))
     # attach worker nodes
-    if worker_ips:
+    if worker_nodes:
         try:
             cluster_attacher.attach_to_cluster(cluster_uuid, 'worker', worker_nodes)
         except (ClusterAttachFailed, ClusterNotAvailable) as except_err:
@@ -157,7 +157,7 @@ def cluster():
 @click.option('--externalDnsName', type=str, required=False, default='',
               help="External DNS name for master VIP")
 @click.option('--privileged', type=bool, required=False, default=True,
-              help="Enable privileged mode for Kubernetes API")
+              help="Enable privileged mode for Kubernetes API, Default: True")
 @click.option('--appCatalogEnabled', type=bool, required=False, default=False, hidden=True,
               help="Enable Helm application catalog")
 @click.option('--allowWorkloadsOnMaster', type=bool, required=False, default=False,
@@ -169,6 +169,10 @@ def cluster():
 def create(ctx, **kwargs):
     """Create a Kubernetes cluster. Read more at http://pf9.io/cli_clcreate."""
     logger.info(msg=click.get_current_context().info_name)
+
+    # Load active config
+    Get(ctx).active_config()
+    Get(ctx).get_token_project()
 
     master_ips = ctx.params['master_ip']
     ctx.params['master_ip'] = ''.join(master_ips).split(' ') if all(len(x) == 1
@@ -266,11 +270,11 @@ def create(ctx, **kwargs):
 @click.option('--externalDnsName', type=str, required=False, default='',
               help="External DNS name for master VIP")
 @click.option('--privileged', type=bool, required=False, default=True,
-              help="Enable privileged mode for Kubernetes API")
-@click.option('--appCatalogEnabled', type=bool, required=False, default=True,
+              help="Enable privileged mode for Kubernetes API, Default: True")
+@click.option('--appCatalogEnabled', type=bool, required=False, default=False, hidden=True,
               help="Enable Helm application catalog")
 @click.option('--allowWorkloadsOnMaster', type=bool, required=False, default=True,
-              help="Taint master nodes (to enable workloads)")
+              help="Taint master nodes (to enable workloads), Default: True")
 @click.option("--networkPlugin", type=str, required=False, default='flannel',
               help="Specify network plugin (Possible values: flannel or calico, Default: flannel)")
 @click.option('--floating-ip', '-f', multiple=True, hidden=True)
@@ -281,6 +285,11 @@ def bootstrap(ctx, **kwargs):
     Read more at http://pf9.io/cli_clbootstrap.
     """
     logger.info(msg=click.get_current_context().info_name)
+
+    # Load active config
+    Get(ctx).active_config()
+    Get(ctx).get_token_project()
+
     prompt_msg = "Proceed with creating a Kubernetes cluster with the current node as the Kubernetes master [y/n]?"
     localnode_confirm = click.prompt(prompt_msg, default='y')
 
@@ -328,6 +337,11 @@ def attach_node(ctx, **kwargs):
     Attach provided nodes the specified cluster. Read more at http://pf9.io/cli_clattach.
     """
     logger.info(msg=click.get_current_context().info_name)
+
+    # Load active config
+    Get(ctx).active_config()
+    Get(ctx).get_token_project()
+
     if not ctx.params['master_ip'] and not ctx.params['worker_ip']:
         msg = "No nodes were specified to be attached to the cluster {}."
         click.secho(msg.format(ctx.params['cluster_name']), fg="red")
@@ -373,13 +387,17 @@ def attach_node(ctx, **kwargs):
               help='SSH key for nodes.')
 @click.option('--ips', '-i', multiple=True,
               help='IPs of the host to be prepared. Specify multiple IPs by repeating this option.')
-@click.option('--floating-ip', '-f', multiple=True, hidden=True)
+@click.option('--floating-ip', '-f', default=None, multiple=True, hidden=True)
 @click.pass_context
-def prepnode(ctx, user, password, ssh_key, ips):
+def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
     """
     Prepare a node to be ready to be added to a Kubernetes cluster. Read more at http://pf9.io/cli_clprep.
     """
     logger.info(msg=click.get_current_context().info_name)
+
+    # Load active config
+    Get(ctx).active_config()
+
     if not ips:
         prompt_msg = "No IPs provided. " \
                      "Proceed with preparing the current node to be added to a Kubernetes cluster [y/n]?"

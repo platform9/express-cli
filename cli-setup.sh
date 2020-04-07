@@ -47,7 +47,7 @@ debugging() {
 	output="DEBUGGING: $(date +"%T") : $(basename $0) : ${1}"
     fi
 
-    if [ -f ${log_file} ]; then
+    if [ -f "${log_file}" ]; then
 	echo "${output}" 2>&1 >> ${log_file}
     fi
     if [[ ${debug_flag} ]]; then
@@ -70,12 +70,11 @@ parse_args() {
       case $i in
 	-h|--help)
 	    echo "Usage: $(basename $0)"
-#	    echo "	  [--branch=]"
-#	    echo "	  [--dev] Installs from local source code for each project in editable mode."
-#	    echo "                This assumes you have provided all source code in the correct locations"
-#	    echo "	  [--local] Installs local source code in the same directory"
-#	    echo "	  [-d|--debug]"
-#	    echo ""
+	    echo "	  [--branch=] Specify a different branch to pull Platform9 Express CLI source"
+	    echo "	  [--dev] Installs from local source code for each project in editable mode."
+	    echo "                This assumes you have provided all source code in the correct locations"
+	    echo "	  [--local] Installs local source code in the same directory"
+	    echo "	  [-d|--debug]"
 	    echo ""
 	    exit 0
 	    shift
@@ -134,30 +133,31 @@ init_venv_python() {
     fi
     stdout_log "Initializing Virtual Environment using Python ${python_version}"
     #Validate and initialize virtualenv
-    if ! (virtualenv --version > /dev/null 2>&1); then
+    if ! (${local_virtualenv} --version > /dev/null 2>&1); then
         debugging "Validating pip"
-	if ! which pip > /dev/null 2>&1; then
+	if ! which ${local_pip} > /dev/null 2>&1; then
             debugging "ERROR: missing package: pip (attempting to install using get-pip.py)"
             curl -s -o ${pip_path} ${pip_url}
             if [ ! -r ${pip_path} ]; then assert "failed to download get-pip.py (from ${pip_url})"; fi
 
-            if ! (python${pyver} "${pip_path}"); then
+            if ! (python${pyver} "${pip_path}" --user); then
                 debugging "ERROR: failed to install package: pip (attempting to install via 'sudo get-pip.py')"
-                if (sudo python${pyver} "${pip_path}" > /dev/null 2>&1); then
+                if (sudo python${pyver} "${pip_path}" --user > /dev/null 2>&1); then
                     assert "Please install package: pip"
                 fi
             fi
         fi
 	debugging "ERROR: missing python package: virtualenv (attempting to install via 'pip install virtualenv')"
         # Attemping to Install virtualenv
-        if ! (pip${pyver} install virtualenv > /dev/null 2>&1); then
+        if ! (${local_pip}${pyver} install virtualenv --user --ignore-installed > /dev/null 2>&1); then
             debugging "ERROR: failed to install python package (attempting to install via 'sudo pip install virtualenv')"
-            if ! (sudo pip${pyver} install virtualenv > /dev/null 2>&1); then
+            if ! (sudo pip${pyver} install virtualenv --user --ignore-installed > /dev/null 2>&1); then
                 assert "Please install the 'virtualenv' module using 'pip install virtualenv'"
             fi
         fi
     fi
-    if ! (virtualenv -p python${pyver} --system-site-packages ${venv} > /dev/null 2>&1); then
+    debugging "INFO: ${local_virtualenv} -p python${pyver} --system-site-packages ${venv} > /dev/null 2>&1"
+    if ! (${local_virtualenv} -p python${pyver} --system-site-packages ${venv} > /dev/null 2>&1); then
         assert "Creation of virtual environment failed"
     fi
     debugging "venv_python: ${venv_python}"
@@ -186,7 +186,7 @@ initialize_basedir() {
 }
 
 setup_pf9_bash_profile() {
-    stdout_log "Setting up pf9_bash_profile"
+    debugging "Setting up pf9_bash_profile"
     if [ -f ~/.bashrc ]; then
 	bash_config=$(realpath ~/.bashrc)
     elif [ -f ~/.bash_profile ]; then
@@ -214,27 +214,6 @@ if [[ -d "${pf9_bin}" ]]; then
     fi
 fi
 
-_pf9ctl_completion() {
-    local IFS=$'
-'
-    COMPREPLY=( $( env COMP_WORDS="${COMP_WORDS[*]}" \
-    	       COMP_CWORD=$COMP_CWORD \
-    	       _PF9CTL_COMPLETE=complete $1 ) )
-    return 0
-}
-
-_pf9ctl_completionetup() {
-    local COMPLETION_OPTIONS=""
-    local BASH_VERSION_ARR=(${BASH_VERSION//./ })
-    # Only BASH version 4.4 and later have the nosort option.
-    if [ ${BASH_VERSION_ARR[0]} -gt 4 ] || ([ ${BASH_VERSION_ARR[0]} -eq 4 ] && [ ${BASH_VERSION_ARR[1]} -ge 4 ]); then
-        COMPLETION_OPTIONS="-o nosort"
-    fi
-
-    complete $COMPLETION_OPTIONS -F _pf9ctl_completion pf9ctl
-}
-
-_pf9ctl_completionetup;
 EOT
 
     if [ -s ${pf9_bash_profile} ]; then
@@ -251,19 +230,19 @@ EOT
 }
 
 create_cli_config(){
-    debugging "Creating PF9 CLI Configuration"
+    debugging "Creating Platform9 Express CLI Configuration"
     auth_retry=0
     max_auth_retry=3
     while (( ${auth_retry} < ${max_auth_retry} )); do
 	(( auth_retry++ ))
 	echo ""
-	echo ""
-	stdout_log "Please provide your Platform9 Credentials:"
+	stdout_log "Please provide your Platform9 Credentials"
 	if [ $auth_retry -gt 1 ]; then 
 	    stdout_log "Attempt $auth_retry of ${max_auth_retry}:"; fi
 	eval "${cli_exec}" config create
 	
 	if (${cli_exec} config validate); then
+        stdout_log "Successfully validated the Platform9 account details"
 	    break
 	else
 	    debugging "Config creation failed"
@@ -281,7 +260,76 @@ create_cli_config(){
     done
 }
 
+validate_platform() {
+  # check if running CentOS 7, Ubuntu 16.04, or Ubuntu 18.04
+  if [ -r /etc/centos-release ]; then
+    release=$(cat /etc/centos-release | cut -d ' ' -f 4)
+    if [[ ! "${release}" == 7.* ]]; then
+        stdout_log "Unsupported CentOS release: ${release}"
+        exit 99
+    fi
+    platform="centos"
+    host_os_info=$(cat /etc/centos-release)
+  elif [ -r /etc/lsb-release ]; then
+    release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d '=' -f2)
+    if [[ ! "${release}" == 16.04* ]] && [[ ! "${release}" == 18.04* ]]; then
+        stdout_log "Unsupported Ubuntu release: ${release}"
+        exit 99
+    fi
+    platform="ubuntu"
+    ubuntu_release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE | cut -d = -f2)
+    host_os_info="${platform} ${ubuntu_release}"
+  else
+    stdout_log "Unsupported platform"
+    exit 99
+  fi
+}
+
+install_prereqs() {
+    stdout_log "Validating and installing package dependencies"
+    if [ "${platform}" == "ubuntu" ]; then
+        # add ansible repository
+        sudo apt-get update -y > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+                echo -e "\nERROR: failed to update apt repository - here's the last 10 lines of the log:\n"
+                tail -10 ${log_file}; exit 1
+        fi
+
+        for pkg in haveged; do
+            dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
+            if [ $? -ne 0 ]; then
+                sudo apt-get -y install ${pkg} >> ${log_file} 2>&1
+                if [ $? -ne 0 ]; then
+                    echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+                    tail -10 ${log_file}; exit 1
+                fi
+            fi
+        done
+        # Install python3-distutils only for 18.04
+        if [[ "${ubuntu_release}" == 18.04* ]]; then
+            sudo apt-get -y install python3-distutils >> ${log_file} 2>&1
+            if [ $? -ne 0 ]; then
+                echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+                tail -10 ${log_file}; exit 1
+            fi
+        fi
+    elif [ "${platform}" == "centos" ]; then
+        sudo rpm -Uvh https://download.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+        for pkg in git haveged; do
+            sudo yum install -y ${pkg} >> ${log_file} 2>&1
+            if [ $? -ne 0 ]; then
+                echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+                tail -10 ${log_file}; exit 1
+            fi
+        done
+        sudo haveged
+    else
+        echo -e "\nERROR: Unsupported platform ${platform}. Please use an Ubuntu 16.04 or 18.04 platform"; exit 1
+    fi
+}
+
 ## main
+
 # Set the path so double quotes don't use the litteral '~'
 pf9_basedir=$(dirname ~/pf9/.)
 log_file=${pf9_basedir}/log/cli_install.log
@@ -290,8 +338,13 @@ venv="${pf9_basedir}/pf9-venv"
 pf9_state_dirs="${pf9_bin} ${venv} ${pf9_basedir}/db ${pf9_basedir}/log"
 
 parse_args "$@"
+
 # initialize installation directory
 initialize_basedir
+
+# Validate & install system packages
+validate_platform
+install_prereqs
 
 debugging "CLFs: $*"
 
@@ -322,39 +375,51 @@ pip_url="https://bootstrap.pypa.io/get-pip.py"
 cli_entrypoint=$(dirname ${venv_python})/express
 cli_exec=${pf9_bin}/pf9ctl
 pf9_bash_profile=${pf9_bin}/pf9-bash-profile.sh
-
+local_pip=$(dirname ~/.)/.local/bin/pip
+local_virtualenv=$(dirname ~/.)/.local/bin/virtualenv
 
 # configure python virtual environment
-stdout_log "Configuring virtualenv"
+debugging "Configuring virtualenv"
 if [ ! -f "${venv_activate}" ]; then
     init_venv_python
 else
     stdout_log "INFO: using exising virtual environment"
 fi
 
-stdout_log "Upgrade pip"
+stdout_log "Upgrading pip"
 if ! (${venv_python} -m pip install --upgrade --ignore-installed pip setuptools wheel > /dev/null 2>&1); then
     assert "Pip upgrade failed"; fi
+debugging "pip install express-cli completed"
 
-stdout_log "Installing Platform9 Express Management Suite"
+stdout_log "Installing Platform9 Express CLI"
 if ! (${venv_python} -m pip install --upgrade --ignore-installed ${cli_url} > /dev/null 2>&1); then
     assert "Installation of Platform9 Express CLI Failed"; fi
 
 if ! (${cli_entrypoint} --help > /dev/null 2>&1); then
-    assert "Base Installation of Platform9 Express-CLI Failed"; fi
+    assert "Base Installation of Platform9 Express CLI Failed"; fi
+
 if [ ! -f ${cli_exec} ]; then
-    stdout_log "Create Express-CLI symlink"
+    debugging "Creating Express CLI symlink"
     if [ -L ${cli_exec} ]; then
-	if ! (rm ${cli_exec} > /dev/null 2>&1); then
-	    assert "Failed to remove existing symlink: ${cli_exec}"; fi
-    fi 
+        if ! (rm ${cli_exec} > /dev/null 2>&1); then
+	        assert "Failed to remove existing symlink: ${cli_exec}"; fi
+    fi
     if ! (ln -s ${cli_entrypoint} ${cli_exec} > /dev/null 2>&1); then
-	    assert "Failed to create Express-CLI symlink: ${cli_exec}"; fi
+	    assert "Failed to create Express CLI symlink: ${cli_exec}"; fi
 else
-    stdout_log "Express-CLI symlink already exist"
+    debugging "Express CLI symlink already exist"
 fi
+
+# Create symlink in /usr/bin
+if [ -L /usr/bin/pf9ctl ]; then
+    if ! (sudo rm /usr/bin/pf9ctl > /dev/null 2>&1); then
+        assert "Failed to remove existing symlink: ${cli_exec}"; fi
+fi
+if ! (sudo ln -s ${cli_entrypoint} /usr/bin/pf9ctl > /dev/null 2>&1); then
+    assert "Failed to create Express CLI symlink in /usr/bin"; fi
+
 if ! (${cli_exec} --help > /dev/null 2>&1); then
-    assert "Installation of Platform9 Express-CLI Failed"; fi
+    assert "Installation of Platform9 Express CLI Failed"; fi
 
 # Setup pf9_bash_profile which creates a bash file that adds ~/pf9/bin to the users path and enables bash-completion
 # An entry to source ~/pf9/bin/pf9_bash_profile is created in one of the following ~/.bashrc, ~/.bash_profile, ~/.profile
@@ -367,12 +432,8 @@ if ! [[ -n ${install_only} ]]; then
     create_cli_config
 fi
 echo ""
+stdout_log "Platform9 Express CLI installation completed successfully"
 echo ""
-echo ""
-echo ""
-stdout_log "Platform9 Express Management Suite installation completed successfully"
-echo ""
-echo "Please find the pf9ctl documentation here: https://docs.platform9.com/kubernetes/PMK-CLI/"
 echo "To start building a Kubernetes cluster you can execute:"
 echo "        ${cli_exec} cluster --help"
 echo ""

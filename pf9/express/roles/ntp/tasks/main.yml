@@ -1,17 +1,6 @@
 ---
 - include_vars: "{{ ansible_os_family|lower }}.yml"
 
-- name: Upgrade Repository Cache
-  apt:
-    update_cache: yes
-    force_apt_get: yes
-    cache_valid_time: 3600
-
-- name: Upgrade System Packages
-  apt:
-    upgrade: dist
-    force_apt_get: yes
-
 - name: Install NTP
   package:
     state: present

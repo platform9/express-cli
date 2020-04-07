@@ -14,7 +14,7 @@ class Utils:
 
 class Logger:
     def __init__(self, log_file):
-        self.FORMATTER = logging.Formatter("%(asctime)s — %(name)s — %(levelname)s — %(message)s")
+        self.FORMATTER = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         self.LOG_FILE = log_file
 
     def get_file_handler(self):

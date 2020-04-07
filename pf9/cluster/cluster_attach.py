@@ -105,14 +105,14 @@ class AttachCluster(object):
 
         # sequentially search results
         for host in json_response:
-            if 'extensions' not in host:
-                continue
-            # TODO: Why is there a loop in a loop where the values from the first loop aren't used?
-            for key, value in host['extensions']['interfaces']['data'].items():
+            try:
                 for iface_name, iface_ip in host['extensions']['interfaces']['data']['iface_ip'].items():
                     if iface_ip == host_ip:
                         logger.info("Node host_id: {}".format(host['id']))
                         return host['id']
+            except Exception as e:
+                logger.exception(e)
+        return None
 
     def get_uuids(self, host_ips):
         # map list of IPs to list of UUIDs
@@ -122,9 +122,8 @@ class AttachCluster(object):
             if host_uuid is not None:
                 host_uuids.append(host_uuid)
             else:
-                # TODO: We should warn the end user and proceed?
-                pass
-
+                logger.info("Unable to find host with IP:{}, please try again or run prep-node first".format(host_ip))
+                click.echo("Unable to find host with IP:{}, please try again or run prep-node first".format(host_ip))
         return host_uuids
 
     def cluster_convergence_status(self, cluster_uuid):

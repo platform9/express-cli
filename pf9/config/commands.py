@@ -22,11 +22,11 @@ def config(ctx):
 
 
 @config.command('create')
-@click.option('--du_url', '--du', required=True, prompt='Platform9 management URL')
-@click.option('--os_username', required=True, prompt='Platform9 user')
-@click.option('--os_password', required=True, prompt='Platform9 password', hide_input=True)
-@click.option('--os_region', required=True, prompt='Platform9 region', default='RegionOne')
-@click.option('--os_tenant', required=True, prompt='Platform9 tenant', default='service')
+@click.option('--du_url', '--du', required=True, prompt='Platform9 Account URL')
+@click.option('--os_username', required=True, prompt='Username')
+@click.option('--os_password', required=True, prompt='Password', hide_input=True)
+@click.option('--os_region', required=True, prompt='Enter Region & Tenant Details (Freedom Plan requires RegionOne and service)\nRegion', default='RegionOne')
+@click.option('--os_tenant', required=True, prompt='Tenant', default='service')
 @click.pass_context
 def create(ctx, du_url, os_username, os_password, os_region, os_tenant):
     """Create Platform9 management plane config."""
@@ -38,7 +38,7 @@ def create(ctx, du_url, os_username, os_password, os_region, os_tenant):
     elif du_url.startswith('http://'):
         ctx.params['du_url'] = du_url.replace('http', 'https')
     elif not du_url.startswith('https://'):
-        exit_msg = "Platform9 management URL must be in form of 'https://....'"
+        exit_msg = "Platform9 account URL must be in form of 'https://....'"
         logger.info(exit_msg)
         click.echo(exit_msg)
         sys.exit(1)
@@ -78,7 +78,7 @@ def create(ctx, du_url, os_username, os_password, os_region, os_tenant):
             file.write(k + '|' + str(v) + '\n')
 
     logger.info('Successfully wrote config: {}'.format(ctx.params['config_name']))
-    click.echo('Successfully wrote Platform9 management plane configuration')
+    click.echo('Successfully wrote Express CLI configuration')
 
 
 @config.command('list')
@@ -141,7 +141,7 @@ def activate(ctx, config_name):
             if 'config_name|' in line:
                 line = line.strip()
                 name = line.replace('config_name|', '')
-                if name is config_name:
+                if name == config_name:
                     logger.info(msg='Config {} is already active config'.format(config_name))
                     click.echo('Config {} is already active config'.format(config_name))
                     sys.exit(0)

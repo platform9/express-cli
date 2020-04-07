@@ -53,7 +53,7 @@ class TestConfigCreateFull(TestCase):
                                 '--os_tenant=service'],
                                obj=self.obj_test)
         assert result.exit_code == 0
-        assert 'Successfully wrote Platform9 management plane configuration' in result.output
+        assert 'Successfully wrote Express CLI configuration' in result.output
 # !!! Need to compaire elements of both config files
 #        with open(os.path.join(self.conf_dir, 'express.conf'), 'r') as read_test_conf:
 #            test_config = read_test_conf.readlines()
@@ -101,7 +101,7 @@ class TestConfigCreateMinimal(TestCase):
                                 '--os_tenant=service'],
                                obj=self.obj_test)
         assert result.exit_code == 0
-        assert 'Successfully wrote Platform9 management plane configuration' in result.output
+        assert 'uccessfully wrote Express CLI configuration' in result.output
 # !!! Need to compaire elements of both config files
 
 

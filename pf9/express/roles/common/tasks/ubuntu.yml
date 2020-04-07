@@ -1,4 +1,16 @@
 ---
+
+- name: Upgrade Repository Cache
+  apt:
+    update_cache: yes
+    force_apt_get: yes
+    cache_valid_time: 3600
+
+- name: Upgrade System Packages
+  apt:
+    upgrade: dist
+    force_apt_get: yes
+
 - name: Install curl, uuid-runtime, software-properties-common, logrotate
   apt:
     pkg:
