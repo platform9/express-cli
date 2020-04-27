@@ -271,7 +271,7 @@ while [ $# -gt 0 ]; do
     shift
     ;;
     --pf9_region)
-        REGION=${2}
+        PF9_REGION=${2}
     shift
     ;;
     --pf9_project)
