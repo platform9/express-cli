@@ -78,7 +78,7 @@ def create(ctx, du_url, os_username, os_password, os_region, os_tenant):
             file.write(k + '|' + str(v) + '\n')
 
     logger.info('Successfully wrote config: {}'.format(ctx.params['config_name']))
-    click.echo('Successfully wrote Express CLI configuration')
+    click.echo('Successfully wrote CLI configuration')
 
 
 @config.command('list')
@@ -121,7 +121,7 @@ def config_list(obj):
 @click.pass_context
 def activate(ctx, config_name):
     """Activate Platform9 management plane config."""
-    # activates pf9-express config file
+    # activates pf9-cli config file
     logger.info(msg=click.get_current_context().info_name)
     logger.info(msg="Activating config %s" % config_name)
     click.echo("Activating config %s" % config_name)

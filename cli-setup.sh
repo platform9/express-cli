@@ -70,11 +70,11 @@ parse_args() {
       case $i in
 	-h|--help)
 	    echo "Usage: $(basename $0)"
-	    echo "	  [--branch=] Specify a different branch to pull Platform9 Express CLI source"
-	    echo "	  [--dev] Installs from local source code for each project in editable mode."
-	    echo "                This assumes you have provided all source code in the correct locations"
-	    echo "	  [--local] Installs local source code in the same directory"
-	    echo "	  [-d|--debug]"
+#	    echo "	  [--branch=] Specify a different branch to pull Platform9 CLI source"
+#	    echo "	  [--dev] Installs from local source code for each project in editable mode."
+#	    echo "                This assumes you have provided all source code in the correct locations"
+#	    echo "	  [--local] Installs local source code in the same directory"
+	    echo "	  [-d|--debug] Uses debug verbosity during install"
 	    echo ""
 	    exit 0
 	    shift
@@ -230,7 +230,7 @@ EOT
 }
 
 create_cli_config(){
-    debugging "Creating Platform9 Express CLI Configuration"
+    debugging "Creating Platform9 CLI Configuration"
     auth_retry=0
     max_auth_retry=3
     while (( ${auth_retry} < ${max_auth_retry} )); do
@@ -391,23 +391,23 @@ if ! (${venv_python} -m pip install --upgrade --ignore-installed pip setuptools 
     assert "Pip upgrade failed"; fi
 debugging "pip install express-cli completed"
 
-stdout_log "Installing Platform9 Express CLI"
+stdout_log "Installing Platform9 CLI"
 if ! (${venv_python} -m pip install --upgrade --ignore-installed ${cli_url} > /dev/null 2>&1); then
-    assert "Installation of Platform9 Express CLI Failed"; fi
+    assert "Installation of Platform9 CLI Failed"; fi
 
 if ! (${cli_entrypoint} --help > /dev/null 2>&1); then
-    assert "Base Installation of Platform9 Express CLI Failed"; fi
+    assert "Base Installation of Platform9 CLI Failed"; fi
 
 if [ ! -f ${cli_exec} ]; then
-    debugging "Creating Express CLI symlink"
+    debugging "Creating Platform9 CLI symlink"
     if [ -L ${cli_exec} ]; then
         if ! (rm ${cli_exec} > /dev/null 2>&1); then
 	        assert "Failed to remove existing symlink: ${cli_exec}"; fi
     fi
     if ! (ln -s ${cli_entrypoint} ${cli_exec} > /dev/null 2>&1); then
-	    assert "Failed to create Express CLI symlink: ${cli_exec}"; fi
+	    assert "Failed to create Platform9 CLI symlink: ${cli_exec}"; fi
 else
-    debugging "Express CLI symlink already exist"
+    debugging "Platform9 CLI symlink already exist"
 fi
 
 # Create symlink in /usr/bin
@@ -416,10 +416,10 @@ if [ -L /usr/bin/pf9ctl ]; then
         assert "Failed to remove existing symlink: ${cli_exec}"; fi
 fi
 if ! (sudo ln -s ${cli_entrypoint} /usr/bin/pf9ctl > /dev/null 2>&1); then
-    assert "Failed to create Express CLI symlink in /usr/bin"; fi
+    assert "Failed to create Platform9 CLI symlink in /usr/bin"; fi
 
 if ! (${cli_exec} --help > /dev/null 2>&1); then
-    assert "Installation of Platform9 Express CLI Failed"; fi
+    assert "Installation of Platform9 CLI Failed"; fi
 
 # Setup pf9_bash_profile which creates a bash file that adds ~/pf9/bin to the users path and enables bash-completion
 # An entry to source ~/pf9/bin/pf9_bash_profile is created in one of the following ~/.bashrc, ~/.bash_profile, ~/.profile
@@ -432,7 +432,7 @@ if ! [[ -n ${install_only} ]]; then
     create_cli_config
 fi
 echo ""
-stdout_log "Platform9 Express CLI installation completed successfully"
+stdout_log "Platform9 CLI installation completed successfully"
 echo ""
 echo "To start building a Kubernetes cluster you can execute:"
 echo "        ${cli_exec} cluster --help"
