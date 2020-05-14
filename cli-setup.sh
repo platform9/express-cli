@@ -66,52 +66,70 @@ stdout_log(){
 }
 
 parse_args() {
-    for i in "$@"; do
-      case $i in
-	-h|--help)
-	    echo "Usage: $(basename $0)"
-#	    echo "	  [--branch=] Specify a different branch to pull Platform9 CLI source"
-#	    echo "	  [--dev] Installs from local source code for each project in editable mode."
-#	    echo "                This assumes you have provided all source code in the correct locations"
-#	    echo "	  [--local] Installs local source code in the same directory"
-	    echo "	  [-d|--debug] Uses debug verbosity during install"
-	    echo ""
-	    exit 0
-	    shift
-	    ;;
-	--branch=*)
-	    if [[ -n ${i#*=} ]]; then
-	      branch="${i#*=}"
-	    else
-		assert "'--branch=' Requires a Branch name"
-	    fi
-	    shift
-	    ;;
-	-d|--debug)
-	    debug_flag="${i#*=}"
-	    shift
-	    ;;
-	--install_only)
-	    install_only=TRUE
-	    shift
-	    ;;
-	--dev)
-	    dev_build="--dev"
-	    shift
-	    ;;
-	--local)
-	    run_local="--local"
-	    shift
-	    ;;
-	*)
-	echo "$i is not a valid command line option."
-	echo ""
-	echo "For help, please use $0 -h"
-	echo ""
-	exit 1
-	;;
-	esac
-	shift
+    while [ $# -gt 0 ]; do
+        case ${1} in
+            -h|--help)
+                echo "Usage: $(basename $0)"
+                #echo "	  [--branch=] Specify a different branch to pull Platform9 CLI source"
+                #echo "	  [--dev] Installs from local source code for each project in editable mode."
+                #echo "                This assumes you have provided all source code in the correct locations"
+                #echo "	  [--local] Installs local source code in the same directory"
+                echo "	  [-d|--debug] Uses debug verbosity during install"
+                echo ""
+                exit 0
+                ;;
+            --branch=*)
+                if [[ -n ${1#*=} ]]; then
+                branch="${1#*=}"
+                else
+                assert "'--branch=' Requires a Branch name"
+                fi
+                shift
+                ;;
+            -d|--debug)
+                debug_flag="${i#*=}"
+                shift
+                ;;
+            --install_only)
+                install_only=TRUE
+                shift
+                ;;
+            --dev)
+                dev_build="--dev"
+                shift
+                ;;
+            --local)
+                run_local="--local"
+                shift
+                ;;
+            --pf9_account_url)
+                PF9_MGMTURL=${2}
+                shift 2
+                ;;
+            --pf9_email)
+                PF9_USER=${2}
+                shift 2
+                ;;
+            --pf9_password)
+                PF9_PASS=${2}
+                shift 2
+                ;;
+            --pf9_region)
+                PF9_REGION=${2}
+                shift 2
+                ;;
+            --pf9_project)
+                PF9_TENANT=${2}
+                shift 2
+                ;;
+            *)
+                echo "${1} is not a valid command line option."
+                echo ""
+                echo "For help, please use $0 -h"
+                echo ""
+                exit 1
+                ;;
+        esac
     done
 }
 
@@ -235,12 +253,17 @@ create_cli_config(){
     max_auth_retry=3
     while (( ${auth_retry} < ${max_auth_retry} )); do
 	(( auth_retry++ ))
-	echo ""
-	stdout_log "Please provide your Platform9 Credentials"
 	if [ $auth_retry -gt 1 ]; then 
 	    stdout_log "Attempt $auth_retry of ${max_auth_retry}:"; fi
-	eval "${cli_exec}" config create
-	
+
+    if [ ! -z "${PF9_MGMTURL}" ] && [ ! -z "${PF9_USER}" ] && [ ! -z "${PF9_PASS}" ] && [ ! -z "${PF9_REGION}" ] && [ ! -z "${PF9_TENANT}" ]; then
+        eval "${cli_exec}" config create --du_url ${PF9_MGMTURL} --os_username ${PF9_USER} --os_password ${PF9_PASS} --os_region ${PF9_REGION} --os_tenant ${PF9_TENANT}
+    else
+        echo ""
+        stdout_log "Please provide your Platform9 Credentials"
+        eval "${cli_exec}" config create
+    fi
+
 	if (${cli_exec} config validate); then
         stdout_log "Successfully validated the Platform9 account details"
 	    break
@@ -262,26 +285,22 @@ create_cli_config(){
 
 validate_platform() {
   # check if running CentOS 7, Ubuntu 16.04, or Ubuntu 18.04
-  if [ -r /etc/centos-release ]; then
-    release=$(cat /etc/centos-release | cut -d ' ' -f 4)
-    if [[ ! "${release}" == 7.* ]]; then
-        stdout_log "Unsupported CentOS release: ${release}"
-        exit 99
-    fi
-    platform="centos"
-    host_os_info=$(cat /etc/centos-release)
-  elif [ -r /etc/lsb-release ]; then
-    release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE= /etc/lsb-release | cut -d '=' -f2)
-    if [[ ! "${release}" == 16.04* ]] && [[ ! "${release}" == 18.04* ]]; then
-        stdout_log "Unsupported Ubuntu release: ${release}"
-        exit 99
-    fi
-    platform="ubuntu"
-    ubuntu_release=$(cat /etc/lsb-release | grep ^DISTRIB_RELEASE | cut -d = -f2)
-    host_os_info="${platform} ${ubuntu_release}"
+  source /etc/os-release
+  if [[ "$ID" == "ubuntu" ]]; then
+     platform="ubuntu"
+     if [[ "$VERSION_ID" != "18.04" ]] && [[ "$VERSION_ID" != "16.04" ]]; then
+         stdout_log "Unsupported Ubuntu version"
+         exit 99
+     fi
+  elif [[ "$ID" == "centos" ]]; then
+     platform="centos"
+     if [[ "$VERSION_ID" != "7" ]]; then
+         stdout_log "Unsupported Centos version"
+         exit 99
+     fi
   else
-    stdout_log "Unsupported platform"
-    exit 99
+     stdout_log "Unsupported linux distribution"
+     exit 99
   fi
 }
 
