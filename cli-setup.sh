@@ -87,7 +87,7 @@ parse_args() {
                 shift
                 ;;
             -d|--debug)
-                debug_flag="${i#*=}"
+                debug_flag="${1#*=}"
                 shift
                 ;;
             --install_only)
@@ -295,11 +295,11 @@ validate_platform() {
   elif [[ "$ID" == "centos" ]]; then
      platform="centos"
      if [[ "$VERSION_ID" != "7" ]]; then
-         stdout_log "Unsupported Centos version"
+         stdout_log "Unsupported CentOS version"
          exit 99
      fi
   else
-     stdout_log "Unsupported linux distribution"
+     stdout_log "Unsupported Linux distribution"
      exit 99
   fi
 }
