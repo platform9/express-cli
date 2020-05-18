@@ -51,7 +51,7 @@ debugging() {
 	echo "${output}" 2>&1 >> ${log_file}
     fi
     if [[ ${debug_flag} ]]; then
-	echo "${output}" 
+	echo "${output}"
     fi
 }
 
@@ -222,7 +222,7 @@ setup_pf9_bash_profile() {
     # Write pf9_bin=${pf9_bin} to the bash_profile as this needs variable expansion
     echo "pf9_bin=${pf9_bin}" > ${pf9_bash_profile}
     debugging "pf9_bin=$(dirname $(realpath .))"
-    # Write the rest of the bash_profile. 
+    # Write the rest of the bash_profile.
     # This is done in 2 steps as only the first line needs variable expansion.
     # The rest of the file must be written with variable test intact.
     cat <<'EOT' >> ${pf9_bash_profile}
@@ -253,7 +253,7 @@ create_cli_config(){
     max_auth_retry=3
     while (( ${auth_retry} < ${max_auth_retry} )); do
 	(( auth_retry++ ))
-	if [ $auth_retry -gt 1 ]; then 
+	if [ $auth_retry -gt 1 ]; then
 	    stdout_log "Attempt $auth_retry of ${max_auth_retry}:"; fi
 
     if [ ! -z "${PF9_MGMTURL}" ] && [ ! -z "${PF9_USER}" ] && [ ! -z "${PF9_PASS}" ] && [ ! -z "${PF9_REGION}" ] && [ ! -z "${PF9_TENANT}" ]; then
@@ -306,7 +306,8 @@ validate_platform() {
 
 install_prereqs() {
     stdout_log "Validating and installing package dependencies"
-    if [ "${platform}" == "ubuntu" ]; then
+    source /etc/os-release
+    if [[ "$ID" == "ubuntu" ]]; then
         # add ansible repository
         sudo apt-get update -y > /dev/null 2>&1
         if [ $? -ne 0 ]; then
@@ -325,14 +326,14 @@ install_prereqs() {
             fi
         done
         # Install python3-distutils only for 18.04
-        if [[ "${ubuntu_release}" == 18.04* ]]; then
+        if [[ "$VERSION_ID" == "18.04" ]]; then
             sudo apt-get -y install python3-distutils >> ${log_file} 2>&1
             if [ $? -ne 0 ]; then
                 echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
                 tail -10 ${log_file}; exit 1
             fi
         fi
-    elif [ "${platform}" == "centos" ]; then
+    elif [[ "$ID" == "centos" ]]; then
         sudo rpm -Uvh https://download.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
         for pkg in git haveged; do
             sudo yum install -y ${pkg} >> ${log_file} 2>&1
@@ -343,7 +344,7 @@ install_prereqs() {
         done
         sudo haveged
     else
-        echo -e "\nERROR: Unsupported platform ${platform}. Please use an Ubuntu 16.04 or 18.04 platform"; exit 1
+        echo -e "\nERROR: Unsupported platform ${ID}-${VERSION_ID}."; exit 1
     fi
 }
 
@@ -368,7 +369,7 @@ install_prereqs
 debugging "CLFs: $*"
 
 # Set global variables
-	
+
 if [ -z ${branch} ]; then
     branch=$(git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
     if [ $? -ne 0 ]; then
@@ -444,7 +445,7 @@ if ! (${cli_exec} --help > /dev/null 2>&1); then
 # An entry to source ~/pf9/bin/pf9_bash_profile is created in one of the following ~/.bashrc, ~/.bash_profile, ~/.profile
 setup_pf9_bash_profile
 if [[ ${bash_config} ]]; then
-    eval source "${bash_config}" 
+    eval source "${bash_config}"
 fi
 if ! [[ -n ${install_only} ]]; then
     # call cli config create which will prompt user to provide PF9 credentials.
