@@ -1,10 +1,12 @@
 ##
 ## Ansible Inventory
 ##
+
 [all]
 [all:vars]
-
-[hypervisors]
+manage_hostname=False
+manage_resolvers=False
+dns_resolvers='["8.8.8.8", "8.8.4.4"]'
 
 ################################################################################################
 ## Kubernetes Groups
