@@ -213,7 +213,7 @@ setup_pf9_bash_profile() {
 	bash_config=$(realpath ~/.profile)
     else
 	bash_config=$(realpath ~/.bashrc)
-	if ! touch "${bash_config}" > /dev/null 2>&1; then
+	if ! touch "${bash_config}" >> ${log_file} 2>&1; then
 	    debugging "Failed to create ${bash_config}, BASH profile not setup"; fi
     fi
     debugging "Using $bash_config to source ${pf9_bash_profile}"
@@ -407,24 +407,24 @@ else
 fi
 
 stdout_log "Upgrading pip"
-if ! (${venv_python} -m pip install --upgrade --ignore-installed pip setuptools wheel > /dev/null 2>&1); then
+if ! (${venv_python} -m pip install --upgrade --ignore-installed pip setuptools wheel >> ${log_file} 2>&1); then
     assert "Pip upgrade failed"; fi
 debugging "pip install express-cli completed"
 
 stdout_log "Installing Platform9 CLI"
-if ! (${venv_python} -m pip install --upgrade --ignore-installed ${cli_url} > /dev/null 2>&1); then
+if ! (${venv_python} -m pip install --upgrade --ignore-installed ${cli_url} >> ${log_file} 2>&1); then
     assert "Installation of Platform9 CLI Failed"; fi
 
-if ! (${cli_entrypoint} --help > /dev/null 2>&1); then
+if ! (${cli_entrypoint} --help >> ${log_file} 2>&1); then
     assert "Base Installation of Platform9 CLI Failed"; fi
 
 if [ ! -f ${cli_exec} ]; then
     debugging "Creating Platform9 CLI symlink"
     if [ -L ${cli_exec} ]; then
-        if ! (rm ${cli_exec} > /dev/null 2>&1); then
+        if ! (rm ${cli_exec} >> ${log_file} 2>&1); then
 	        assert "Failed to remove existing symlink: ${cli_exec}"; fi
     fi
-    if ! (ln -s ${cli_entrypoint} ${cli_exec} > /dev/null 2>&1); then
+    if ! (ln -s ${cli_entrypoint} ${cli_exec} >> ${log_file} 2>&1); then
 	    assert "Failed to create Platform9 CLI symlink: ${cli_exec}"; fi
 else
     debugging "Platform9 CLI symlink already exist"
@@ -432,13 +432,13 @@ fi
 
 # Create symlink in /usr/bin
 if [ -L /usr/bin/pf9ctl ]; then
-    if ! (sudo rm /usr/bin/pf9ctl > /dev/null 2>&1); then
+    if ! (sudo rm /usr/bin/pf9ctl >> ${log_file} 2>&1); then
         assert "Failed to remove existing symlink: ${cli_exec}"; fi
 fi
-if ! (sudo ln -s ${cli_entrypoint} /usr/bin/pf9ctl > /dev/null 2>&1); then
+if ! (sudo ln -s ${cli_entrypoint} /usr/bin/pf9ctl >> ${log_file} 2>&1); then
     assert "Failed to create Platform9 CLI symlink in /usr/bin"; fi
 
-if ! (${cli_exec} --help > /dev/null 2>&1); then
+if ! (${cli_exec} --help >> ${log_file} 2>&1); then
     assert "Installation of Platform9 CLI Failed"; fi
 
 # Setup pf9_bash_profile which creates a bash file that adds ~/pf9/bin to the users path and enables bash-completion
