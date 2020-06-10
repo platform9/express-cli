@@ -315,7 +315,7 @@ install_prereqs() {
                 tail -10 ${log_file}; exit 1
         fi
 
-        for pkg in haveged sshpass; do
+        for pkg in haveged sshpass git; do
             dpkg-query -f '${binary:Package}\n' -W | grep ^${pkg}$ > /dev/null 2>&1
             if [ $? -ne 0 ]; then
                 sudo apt-get -y install ${pkg} >> ${log_file} 2>&1
