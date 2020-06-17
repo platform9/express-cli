@@ -304,8 +304,8 @@ validate_platform() {
   fi
 
   # check for locale
-  if [[ "${LANG}" != "en_US.UTF-8" ]]; then
-    stdout_log "Warning: Expected locale en_US.UTF-8 but found ${LANG}. CLI Installation may fail"
+  if [[ "${LANG}" != *"UTF-8"* ]]; then
+    stdout_log "Warning: Expected unicode supported locale like en_US.UTF-8 but found ${LANG}. CLI Installation may fail"
   fi
 }
 
