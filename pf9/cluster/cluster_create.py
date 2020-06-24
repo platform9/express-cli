@@ -7,6 +7,8 @@ import click
 from pf9.modules.util import Logger
 from pf9.cluster.exceptions import ClusterCreateFailed
 from pf9.cluster.exceptions import ClusterNotAvailable
+from pf9.modules.express import Get
+
 
 logger = Logger(os.path.join(os.path.expanduser("~"), 'pf9/log/pf9ctl.log')).get_logger(__name__)
 
@@ -17,6 +19,7 @@ class CreateCluster(object):
         self.project_id = ctx.params['project_id']
         self.token = ctx.params['token']
         self.du_url = ctx.params['du_url']
+        self.region_du_url = "https://{}".format(Get(ctx).region_fqdn())
         self.cluster_name = ctx.params['cluster_name']
         self.headers = { 'content-type': 'application/json', 'X-Auth-Token': self.token }
 
@@ -28,7 +31,7 @@ class CreateCluster(object):
     def get_nodepool_id(self):
         try:
             api_endpoint = "qbert/v3/{}/cloudProviders".format(self.project_id)
-            pf9_response = requests.get("{}/{}".format(self.du_url,api_endpoint), headers=self.headers)
+            pf9_response = requests.get("{}/{}".format(self.region_du_url,api_endpoint), headers=self.headers)
             if pf9_response.status_code != 200:
                 return None
 
@@ -75,7 +78,7 @@ class CreateCluster(object):
         # create cluster (post to qbert)
         try:
             api_endpoint = "qbert/v3/{}/clusters".format(self.project_id)
-            pf9_response = requests.post("{}/{}".format(self.du_url, api_endpoint),
+            pf9_response = requests.post("{}/{}".format(self.region_du_url, api_endpoint),
                                          headers=self.headers, data=json.dumps(cluster_create_payload))
         except Exception as except_err:
             except_msg = "Failed to create cluster: {}".format(except_err)
@@ -95,7 +98,7 @@ class CreateCluster(object):
     def cluster_exists(self):
         try:
             api_endpoint = "qbert/v3/{}/clusters".format(self.project_id)
-            pf9_response = requests.get("{}/{}".format(self.du_url, api_endpoint), headers=self.headers)
+            pf9_response = requests.get("{}/{}".format(self.region_du_url, api_endpoint), headers=self.headers)
             if pf9_response.status_code != 200:
                 return False, None
             json_response = json.loads(pf9_response.text)
@@ -133,4 +136,3 @@ class CreateCluster(object):
 
         # return cluster uuid
         return cluster_uuid
-
