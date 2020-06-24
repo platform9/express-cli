@@ -6,6 +6,7 @@ import click
 
 from pf9.cluster.exceptions import ClusterAttachFailed, FailedActiveMasters, ClusterNotAvailable
 from pf9.modules.util import Logger
+from pf9.modules.express import Get
 
 logger = Logger(os.path.join(os.path.expanduser("~"), 'pf9/log/pf9ctl.log')).get_logger(__name__)
 
@@ -23,6 +24,7 @@ class AttachCluster(object):
         self.token = ctx.params['token']
         self.du_url = ctx.params['du_url']
         self.cluster_name = ctx.params['cluster_name']
+        self.region_du_url = "https://{}".format(Get(ctx).region_fqdn())
         self.headers = { 'content-type': 'application/json', 'X-Auth-Token': self.token }
 
     def wait_for_n_active_masters(self, master_node_num):
@@ -66,7 +68,7 @@ class AttachCluster(object):
         num_active_masters = 0
         try:
             api_endpoint = "qbert/v3/{}/nodes".format(self.project_id)
-            pf9_response = requests.get("{}/{}".format(self.du_url, api_endpoint),
+            pf9_response = requests.get("{}/{}".format(self.region_du_url, api_endpoint),
                                         headers=self.headers)
             if pf9_response.status_code != 200:
                 return num_active_masters
@@ -92,7 +94,7 @@ class AttachCluster(object):
     def get_resmgr_hostid(self, host_ip):
         try:
             api_endpoint = "resmgr/v1/hosts"
-            pf9_response = requests.get("{}/{}".format(self.du_url, api_endpoint), 
+            pf9_response = requests.get("{}/{}".format(self.region_du_url, api_endpoint),
                                         headers=self.headers)
             if pf9_response.status_code != 200:
                 return None
@@ -130,7 +132,7 @@ class AttachCluster(object):
         converge_status = "pending"
         try:
             api_endpoint = "qbert/v3/{}/clusters/{}".format(self.project_id, cluster_uuid)
-            pf9_response = requests.get("{}/{}".format(self.du_url, api_endpoint),
+            pf9_response = requests.get("{}/{}".format(self.region_du_url, api_endpoint),
                                         headers=self.headers)
             if pf9_response.status_code != 200:
                 return converge_status
@@ -199,7 +201,7 @@ class AttachCluster(object):
             try:
                 api_endpoint = "qbert/v3/{}/clusters/{}/attach".format(self.project_id,
                                                                        cluster_uuid)
-                pf9_response = requests.post("{}/{}".format(self.du_url, api_endpoint),
+                pf9_response = requests.post("{}/{}".format(self.region_du_url, api_endpoint),
                                              headers=self.headers,
                                              data=json.dumps(cluster_attach_payload))
                 if pf9_response.status_code == 200:
