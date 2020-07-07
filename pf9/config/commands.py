@@ -199,7 +199,7 @@ def config_validate(ctx):
             raise CLIException(msg)
         else:
             logger.info(msg="Config {} Validation Successful".format(ctx.params['config_name']))
-            click.echo(msg="Config {} Validation Successful".format(ctx.params['config_name']))
+            click.echo("Config {} Validation Successful".format(ctx.params['config_name']))
     except UserAuthFailure as except_msg:
         logger.exception("Authentication failure for config:[{}] to: {}".format(ctx.params['config_name'], except_msg))
         click.echo("Authentication failure for config:[{}] to: {}".format(ctx.params['config_name'],
