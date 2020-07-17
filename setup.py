@@ -76,7 +76,8 @@ setup(
                       'paramiko',
                       'fabric',
                       'invoke',
-                      'ansible'
+                      'ansible',
+                      'analytics-python'
                       ],
     extras_require={
         'test': ['coverage', 'pytest', 'pytest-cov', 'mock'],

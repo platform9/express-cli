@@ -50,7 +50,8 @@ class Get:
     """Express.Get(ctx) contains method to "GET" data required to run express"""
     def __init__(self, ctx):
         self.ctx = ctx
-        
+
+
     def get_token_project(self):
         """Calls ostoken.GetToken().get_token_project() using active config
                 return token, project_id
@@ -68,6 +69,30 @@ class Get:
             # Add token and project_id to ctx and return token_project
             self.ctx.params['token'], self.ctx.params['project_id'] = token_project
             return token_project
+        except UserAuthFailure as except_msg:
+            logger.exception(except_msg)
+            raise
+        except CLIException as except_err:
+            logger.exception(except_err)
+            raise except_err
+
+    def get_token_project_user_id(self):
+        """Calls ostoken.GetToken().get_token_project() using active config
+                return token, project_id
+        """
+        try:
+            self.active_config()
+            token_project_user_id = GetToken().get_token_project_user_id(
+                self.ctx.params["du_url"],
+                self.ctx.params["du_username"],
+                self.ctx.params["du_password"],
+                self.ctx.params["du_tenant"])
+            if not token_project_user_id:
+                except_err = "Failed to obtain an Authentication Token from: {}".format(self.ctx.params["du_url"])
+                raise CLIException(except_err)
+            # Add token and project_id to ctx and return token_project
+            self.ctx.params['token'], self.ctx.params['project_id'], self.ctx.params['user_id'] = token_project_user_id
+            return token_project_user_id
         except UserAuthFailure as except_msg:
             logger.exception(except_msg)
             raise

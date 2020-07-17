@@ -14,6 +14,7 @@ from pf9.cluster.helpers import validate_ssh_details, get_local_node_addresses, 
 from pf9.cluster.cluster_create import CreateCluster
 from pf9.cluster.cluster_attach import AttachCluster
 from ..modules.express import Get
+from ..modules.analytics_utils import SegmentSession, SegmentSessionWrapper
 
 logger = Logger(os.path.join(os.path.expanduser("~"), 'pf9/log/pf9ctl.log')).get_logger(__name__)
 
@@ -32,6 +33,9 @@ def prep_node(ctx, user, password, ssh_key, ips, node_prep_only):
     log_file = os.path.join(ctx.obj['pf9_log_dir'],
                             datetime.now().strftime('node_provision_%Y_%m_%d-%H_%M_%S.log'))
     os.environ['ANSIBLE_CONFIG'] = ctx.obj['pf9_ansible_cfg']
+    
+    SegmentSessionWrapper(ctx).send_track('Prep Express Run')
+
     # Progress bar logic: estimate total time, while cmd_proc running, poll at interval, refreshing progbar
     # TODO: if both masters and workers, Add to est_total_time to allot for masters role, before workers.
     time_per_host_secs = 200
@@ -89,6 +93,8 @@ def attach_cluster(cluster_name, master_ips, worker_ips, ctx):
                     ctx.params['cluster_name']), fg="red")
         sys.exit(1)
 
+    SegmentSessionWrapper(ctx).send_track("Validate Cluster Existence")
+
     master_nodes = None
     worker_nodes = None
     if master_ips:
@@ -112,6 +118,8 @@ def attach_cluster(cluster_name, master_ips, worker_ips, ctx):
             logger.info("{}".format(node))
             click.echo("{}".format(node))
 
+    SegmentSessionWrapper(ctx).send_track("Fetch Node UUIDs")
+
     # attach master nodes
     #TODO: Likely needs a progress bar?
     if master_nodes:
@@ -121,6 +129,8 @@ def attach_cluster(cluster_name, master_ips, worker_ips, ctx):
         except (ClusterAttachFailed, ClusterNotAvailable) as except_err:
             logger.exception(except_err)
             click.echo("Failed attaching master node(s) to cluster: {}".format(except_err))
+    SegmentSessionWrapper(ctx).send_track("Attach Master Nodes")
+
     # attach worker nodes
     if worker_nodes:
         try:
@@ -128,7 +138,7 @@ def attach_cluster(cluster_name, master_ips, worker_ips, ctx):
         except (ClusterAttachFailed, ClusterNotAvailable) as except_err:
             logger.exception(except_err)
             click.echo("Failed attaching worker node(s) to cluster: {}".format(except_err))
-
+    SegmentSessionWrapper(ctx).send_track("Attach Worker Nodes")
 
 @click.group()
 def cluster():
@@ -172,7 +182,30 @@ def create(ctx, **kwargs):
 
     # Load active config
     Get(ctx).active_config()
-    Get(ctx).get_token_project()
+    Get(ctx).get_token_project_user_id()
+
+    segment_session = SegmentSession()
+    segment_event_properties = dict(arg_cluster_name=ctx.params['cluster_name'],
+                                    arg_master_ips=ctx.params['master_ip'],
+                                    arg_worker_ips=ctx.params['worker_ip'],
+                                    arg_user='REDACTED', arg_password='REDACTED',
+                                    arg_ssh_key=ctx.params.get('ssh_key', None),
+                                    arg_masterVip=ctx.params.get('mastervip', None),
+                                    arg_masterVipIf=ctx.params.get('mastervipif', None),
+                                    arg_metallbIpRange=ctx.params.get('metallbiprange', None),
+                                    arg_containersCidr=ctx.params.get('containerscidr', None),
+                                    arg_servicesCidr=ctx.params.get('servicescidr', None),
+                                    arg_externalDnsName=ctx.params.get('externaldnsname', None),
+                                    arg_privileged=ctx.params.get('privileged', None),
+                                    arg_appCatalogEnabled=ctx.params.get('appcatalogenabled', None),
+                                    arg_allowWorkloadsOnMaster=ctx.params.get('allowworkloadsonmaster', None),
+                                    arg_networkPlugin=ctx.params.get('networkplugin', None),
+                                    arg_floating_ip=ctx.params.get('floating_ip', None),
+                                    keystone_user_id=ctx.params['user_id'],
+                                    du_account_url=ctx.params['du_url'])
+    SegmentSessionWrapper(ctx).load_segment_session(segment_session, segment_event_properties, "Create Cluster")
+    SegmentSessionWrapper(ctx).send_track("Load Active config")
+    segment_session.send_identify(ctx.params['du_username'], ctx.params['user_id'])
 
     master_ips = ctx.params['master_ip']
     ctx.params['master_ip'] = ''.join(master_ips).split(' ') if all(len(x) == 1
@@ -192,6 +225,7 @@ def create(ctx, **kwargs):
     try:
         check_vip_needed(ctx.params['master_ip'], ctx.params.get('mastervip', None),
                          ctx.params.get('mastervipif', None))
+        SegmentSessionWrapper(ctx).send_track("Validate VIP")
 
         if len(all_ips) > 0:
             # Nodes are provided. So prep them.
@@ -209,11 +243,17 @@ def create(ctx, **kwargs):
                                          ctx.params['ssh_key'])
                     adj_ips = adj_ips + (ip,)
 
+            SegmentSessionWrapper(ctx).send_track("Validate SSH credentials")
+
             # Will throw in case of failed run
             prep_node(ctx, ctx.params['user'], ctx.params['password'],
-                      ctx.params['ssh_key'], adj_ips, node_prep_only=True)
+                                        ctx.params['ssh_key'], adj_ips,
+                                        node_prep_only=True)
+            SegmentSessionWrapper(ctx).send_track("Prep Node")
 
         cluster_uuid = create_cluster(ctx)
+        SegmentSessionWrapper(ctx).send_track("Create Cluster")
+
         logger.info("Cluster UUID: {}".format(cluster_uuid))
         click.echo("Cluster UUID: {}".format(cluster_uuid))
 
@@ -239,11 +279,14 @@ def create(ctx, **kwargs):
                     worker_ips = worker_ips + (ip,)
 
             attach_cluster(ctx.params['cluster_name'], master_ips, worker_ips, ctx)
+            SegmentSessionWrapper(ctx).send_track("Attach Cluster")
+
     except CLIException as e:
         logger.exception("Cluster Create Failed")
         click.secho("Failed to create cluster {}. {}".format(
                     ctx.params['cluster_name'], e.msg), fg="red")
         sys.exit(1)
+
     response = ""
     if len(master_ips) > 0:
         response = response + "\n    masters: {}".format(master_ips)
@@ -253,6 +296,7 @@ def create(ctx, **kwargs):
                 "using node(s):{}".format(ctx.params['cluster_name'], response))
     click.secho("Successfully created cluster {} "
                 "using node(s):{}".format(ctx.params['cluster_name'], response), fg="green")
+    SegmentSessionWrapper(ctx).send_track("Create Cluster Complete")
 
 
 @cluster.command('bootstrap')
@@ -288,7 +332,25 @@ def bootstrap(ctx, **kwargs):
 
     # Load active config
     Get(ctx).active_config()
-    Get(ctx).get_token_project()
+    Get(ctx).get_token_project_user_id()
+
+    segment_session = SegmentSession()
+    segment_event_properties = dict(arg_cluster_name=ctx.params['cluster_name'], arg_masterVip=ctx.params.get('mastervip', None),
+                                    arg_masterVipIf=ctx.params.get('mastervipif', None),
+                                    arg_metallbIpRange=ctx.params.get('metallbiprange', None),
+                                    arg_containersCidr=ctx.params.get('containerscidr', None),
+                                    arg_servicesCidr=ctx.params.get('servicescidr', None),
+                                    arg_externalDnsName=ctx.params.get('externaldnsname', None),
+                                    arg_privileged=ctx.params.get('privileged', None),
+                                    arg_appCatalogEnabled=ctx.params.get('appcatalogenabled', None),
+                                    arg_allowWorkloadsOnMaster=ctx.params.get('allowworkloadsonmaster', None),
+                                    arg_networkPlugin=ctx.params.get('networkplugin', None),
+                                    arg_floating_ip=ctx.params.get('floating_ip', None),
+                                    keystone_user_id=ctx.params['user_id'],
+                                    du_account_url=ctx.params['du_url'])
+    SegmentSessionWrapper(ctx).load_segment_session(segment_session, segment_event_properties, "Bootstrap")
+    SegmentSessionWrapper(ctx).send_track("Load Active config")
+    segment_session.send_identify(ctx.params['du_username'], ctx.params['user_id'])
 
     prompt_msg = "Proceed with creating a Kubernetes cluster with the current node as the Kubernetes master [y/n]?"
     localnode_confirm = click.prompt(prompt_msg, default='y')
@@ -301,8 +363,11 @@ def bootstrap(ctx, **kwargs):
 
         # This will throw when the prep node fails
         prep_node(ctx, None, None, None, ('localhost',), node_prep_only=True)
+        SegmentSessionWrapper(ctx).send_track("Prep Node Complete")
 
         cluster_uuid = create_cluster(ctx)
+        SegmentSessionWrapper(ctx).send_track("Create Cluster Complete")
+
         logger.info("Cluster UUID: {}".format(cluster_uuid))
         click.echo("Cluster UUID: {}".format(cluster_uuid))
 
@@ -312,12 +377,15 @@ def bootstrap(ctx, **kwargs):
         # getting all the non local IPs and picking the first one
         # Attach nodes
         attach_cluster(ctx.params['cluster_name'], (local_ip[0],), None, ctx)
+        SegmentSessionWrapper(ctx).send_track("Attach Cluster Complete")
+
     except CLIException as e:
         logger.exception("Bootstrap Failed")
         click.secho("Encountered an error while bootstrapping the local node to a Kubernetes"\
                     " cluster. {}".format(e.msg), fg="red")
         sys.exit(1)
 
+    SegmentSessionWrapper(ctx).send_track("Bootstrap Complete")
     logger.info("Successfully created cluster {} using this node".format(ctx.params['cluster_name']))
     click.secho("Successfully created cluster {} "\
                 "using this node".format(ctx.params['cluster_name']),
@@ -340,7 +408,17 @@ def attach_node(ctx, **kwargs):
 
     # Load active config
     Get(ctx).active_config()
-    Get(ctx).get_token_project()
+    # Validate Token
+    Get(ctx).get_token_project_user_id()
+
+    segment_session = SegmentSession()
+    segment_event_properties = dict(arg_cluster_name=ctx.params['cluster_name'], arg_master_ips=ctx.params['master_ip'],
+                                    arg_worker_ips=ctx.params['worker_ip'], arg_floating_ip=ctx.params['floating_ip'],
+                                    keystone_user_id=ctx.params['user_id'],
+                                    du_account_url=ctx.params['du_url'])
+    SegmentSessionWrapper(ctx).load_segment_session(segment_session, segment_event_properties, "Attach Node")
+    SegmentSessionWrapper(ctx).send_track("Load Active config")
+    segment_session.send_identify(ctx.params['du_username'], ctx.params['user_id'])
 
     if not ctx.params['master_ip'] and not ctx.params['worker_ip']:
         msg = "No nodes were specified to be attached to the cluster {}."
@@ -397,6 +475,16 @@ def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
 
     # Load active config
     Get(ctx).active_config()
+    # Validate Token
+    Get(ctx).get_token_project_user_id()
+
+    segment_session = SegmentSession()
+    segment_event_properties = dict(arg_user='REDACTED', arg_password='REDACTED', arg_ssh_key=ssh_key,
+                                    arg_ips=ips, arg_floating_ip=floating_ip, keystone_user_id=ctx.params['user_id'],
+                                    du_account_url=ctx.params['du_url'])
+    SegmentSessionWrapper(ctx).load_segment_session(segment_session, segment_event_properties, "Prep Node")
+    SegmentSessionWrapper(ctx).send_track('Load Active config')
+    segment_session.send_identify(ctx.params['du_username'], ctx.params['user_id'])
 
     if not ips:
         prompt_msg = "No IPs provided. " \
@@ -427,8 +515,11 @@ def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
 
                 adj_ips = adj_ips + (ip,)
 
+        SegmentSessionWrapper(ctx).send_track('Node IPs validation')
+
         prep_node(ctx, user, password, ssh_key, adj_ips, node_prep_only=True)
 
+        SegmentSessionWrapper(ctx).send_track('Prep Node Complete')
     except CLIException as e:
         logger.exception("Encountered an error while preparing the provided nodes as Kubernetes nodes.")
         click.secho("Encountered an error while preparing the provided nodes as "
