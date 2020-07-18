@@ -348,7 +348,7 @@ def bootstrap(ctx, **kwargs):
                                     arg_floating_ip=ctx.params.get('floating_ip', None),
                                     keystone_user_id=ctx.params['user_id'],
                                     du_account_url=ctx.params['du_url'])
-    SegmentSessionWrapper(ctx).load_segment_session(segment_session, segment_event_properties, "Bootstrap")
+    SegmentSessionWrapper(ctx).load_segment_session(segment_session, segment_event_properties, "Bootstrap Cluster")
     SegmentSessionWrapper(ctx).send_track("Load Active config")
     segment_session.send_identify(ctx.params['du_username'], ctx.params['user_id'])
 
@@ -445,6 +445,7 @@ def attach_node(ctx, **kwargs):
     # handles this situation
     try:
         attach_cluster(ctx.params['cluster_name'], master_ips, worker_ips, ctx)
+        SegmentSessionWrapper(ctx).send_track("Attach Cluster Complete")
     except CLIException as e:
         logger.exception("Cluster Attach Failed")
         click.secho("Encountered an error while attaching nodes to a Kubernetes"\
