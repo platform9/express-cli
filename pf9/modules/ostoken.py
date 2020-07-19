@@ -78,6 +78,13 @@ class GetToken:
         project_id = os_auth_req['json']['token']['project']['id']
         return token, project_id
 
+    def get_token_project_user_id(self, host, username, password, tenant):
+        os_auth_req = self.os_auth(host, username, password, tenant)
+        token = os_auth_req['headers']['X-Subject-Token']
+        project_id = os_auth_req['json']['token']['project']['id']
+        user_id = os_auth_req['json']['token']['user']['id']
+        return token, project_id, user_id
+
 
 class GetRegionURL:
     """GetRegionURL Returns FQDN of a public API service endpoint for a given Openstack Region"""
