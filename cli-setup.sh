@@ -384,7 +384,7 @@ fi
 debugging "Setting environment variables to be passed to installers"
 
 if [[ -z ${run_local} && -z ${dev_build} ]]; then
-    cli_url="git+git://github.com/platform9/express-cli.git@${branch}#egg=express-cli"
+    cli_url="git+https://github.com/platform9/express-cli.git@${branch}#egg=express-cli"
 elif [[ -n ${dev_build} ]]; then
     cli_url="-e .[test]"
 elif [[ -n ${run_local} ]]; then
