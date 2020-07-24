@@ -27,7 +27,10 @@ class SegmentSessionWrapper:
 
     def reload_segment_session_with_auth(self):
         """
-            Reload Segment Session with DU URL and Keystone User ID after keystone Auth
+            Reload Segment Session with DU URL and Keystone User ID after keystone Auth.
+            This is needed to add keystone user_id and account_url to the segment event properties post initialization.
+            As we want to capture pre Auth Failures/Errors, we should be able to send events to segment pre auth
+            and pre config load, during which we wont have keystone user_id / du_account_url.
         """
         segment_event_properties = self.ctx.params["segment_event_properties"]
         segment_event_properties.update(du_account_url=self.ctx.params['du_url'])
