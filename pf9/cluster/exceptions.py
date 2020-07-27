@@ -40,6 +40,11 @@ class ClusterNotAvailable(ClusterCLIException):
         super(ClusterNotAvailable, self).__init__(msg)
 
 
+class NodeNotFound(ClusterCLIException):
+    def __init__(self, msg):
+        super(NodeNotFound, self).__init__(msg)
+
+
 class FailedActiveMasters(ClusterCLIException):
     def __init__(self, msg):
         super(FailedActiveMasters, self).__init__(msg)

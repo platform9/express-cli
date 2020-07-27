@@ -130,9 +130,7 @@ def attach_cluster(cluster_name, master_ips, worker_ips, ctx):
             cluster_attacher.wait_for_n_active_masters(len(master_nodes))
         except (ClusterAttachFailed, ClusterNotAvailable) as except_err:
             logger.exception(except_err)
-            error_msg = "Failed attaching master node(s) to cluster: {}".format(except_err)
-            click.echo(error_msg)
-            SegmentSessionWrapper(ctx).send_track_error('Cluster Attach', error_msg)
+            click.echo("Failed attaching master node(s) to cluster: {}".format(except_err))
             raise except_err
     SegmentSessionWrapper(ctx).send_track("Attach Master Nodes")
 
@@ -142,9 +140,7 @@ def attach_cluster(cluster_name, master_ips, worker_ips, ctx):
             cluster_attacher.attach_to_cluster(cluster_uuid, 'worker', worker_nodes)
         except (ClusterAttachFailed, ClusterNotAvailable) as except_err:
             logger.exception(except_err)
-            error_msg = "Failed attaching worker node(s) to cluster: {}".format(except_err)
-            click.echo(error_msg)
-            SegmentSessionWrapper(ctx).send_track_error('Cluster Attach', error_msg)
+            click.echo("Failed attaching master node(s) to cluster: {}".format(except_err))
             raise except_err
     SegmentSessionWrapper(ctx).send_track("Attach Worker Nodes")
 

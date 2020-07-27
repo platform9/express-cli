@@ -4,7 +4,7 @@ import requests
 import json
 import click
 
-from pf9.cluster.exceptions import ClusterAttachFailed, FailedActiveMasters, ClusterNotAvailable, CLIException
+from pf9.cluster.exceptions import ClusterAttachFailed, FailedActiveMasters, ClusterNotAvailable, NodeNotFound
 from pf9.modules.util import Logger
 from pf9.modules.express import Get
 
@@ -127,7 +127,7 @@ class AttachCluster(object):
                 error_msg = "Unable to find host with IP:{}, please try again or run prep-node first".format(host_ip)
                 logger.error(error_msg)
                 click.echo(error_msg)
-                raise CLIException(error_msg)
+                raise NodeNotFound(error_msg)
         return host_uuids
 
     def cluster_convergence_status(self, cluster_uuid):
