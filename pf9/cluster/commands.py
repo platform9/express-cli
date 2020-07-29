@@ -378,6 +378,8 @@ def bootstrap(ctx, **kwargs):
 
     if localnode_confirm.lower() == 'n':
         click.secho("Quitting...", fg="red")
+        SegmentSessionWrapper(ctx).send_track_abort('CLUSTER BOOTSTRAP',
+                                                    'Declined to proceed with creating a Kubernetes cluster with the current node as the Kubernetes master')
         sys.exit(1)
 
     try:
@@ -451,8 +453,9 @@ def attach_node(ctx, **kwargs):
     segment_session.send_group(ctx.params['user_id'], ctx.params['du_url'])
 
     if not ctx.params['master_ip'] and not ctx.params['worker_ip']:
-        msg = "No nodes were specified to be attached to the cluster {}."
+        msg = "No nodes were specified to be attached to the cluster {}.".format(ctx.params['cluster_name'])
         click.secho(msg.format(ctx.params['cluster_name']), fg="red")
+        SegmentSessionWrapper(ctx).send_track_error('No Nodes', msg)
         sys.exit(1)
 
     master_ips = ()
@@ -532,6 +535,8 @@ def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
                      "Proceed with preparing the current node to be added to a Kubernetes cluster [y/n]?"
         localnode_confirm = click.prompt(prompt_msg, default='y')
         if localnode_confirm.lower() == 'n':
+            SegmentSessionWrapper(ctx).send_track_abort('Prep Node',
+                                                        'Declined to proceed with preparing the current node to be added to a Kubernetes cluster')
             sys.exit(1)
         else:
             ips = ("localhost",)

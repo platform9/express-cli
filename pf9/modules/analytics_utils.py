@@ -54,6 +54,15 @@ class SegmentSessionWrapper:
         self.ctx.params["segment_session"].send_track(error_event_name, segment_properties,
                                                       user_id=self.ctx.params.get('user_id', None))
 
+    def send_track_abort(self, step_name, abort_message):
+        error_event_name = " - ".join([self.ctx.params["segment_event_prefix"], self.ctx.params["segment_subcommand"],
+                                 "ABORT"])
+        segment_properties = self.ctx.params["segment_event_properties"].copy()
+        segment_properties.update(dict(abort_name=step_name, abort_message=str(abort_message)))
+        # its possible that this was an Authentication Failure, so it might not have user_id
+        self.ctx.params["segment_session"].send_track(error_event_name, segment_properties,
+                                                      user_id=self.ctx.params.get('user_id', None))
+
 
 class SegmentSession:
 
