@@ -8,7 +8,7 @@ from pf9.modules.util import Utils, Logger
 
 logger = Logger(os.path.join(os.path.expanduser("~"), 'pf9/log/pf9ctl.log')).get_logger(__name__)
 
-# the write_key is the Segment API authorization and identifier, without this no data submission will work. The API Key below is for Dev/Test work
+# the write_key is the Segment API authorization and identifier, without this no data submission will work.
 analytics.write_key = 'qDQpEaZQnDgqpXXG6jiV7OlZGqYZlQAa'
 
 
@@ -25,6 +25,18 @@ class SegmentSessionWrapper:
         self.ctx.params["segment_subcommand"] = segment_subcommand
         self.ctx.params["segment_step_count"] = 1
 
+    def reload_segment_session_with_auth(self):
+        """
+            Reload Segment Session with DU URL and Keystone User ID after keystone Auth.
+            This is needed to add keystone user_id and account_url to the segment event properties post initialization.
+            As we want to capture pre Auth Failures/Errors, we should be able to send events to segment pre auth
+            and pre config load, during which we wont have keystone user_id / du_account_url.
+        """
+        segment_event_properties = self.ctx.params["segment_event_properties"]
+        segment_event_properties.update(du_account_url=self.ctx.params['du_url'])
+        segment_event_properties.update(keystone_user_id=self.ctx.params['user_id'])
+        self.ctx.params["segment_event_properties"] = segment_event_properties
+
     def send_track(self, step_name):
         """ Builds event name based on subcommand and step count
         """
@@ -35,11 +47,21 @@ class SegmentSessionWrapper:
 
     def send_track_error(self, step_name, error_message):
         error_event_name = " - ".join([self.ctx.params["segment_event_prefix"], self.ctx.params["segment_subcommand"],
-                                 step_name, "ERROR"])
+                                 "ERROR"])
         segment_properties = self.ctx.params["segment_event_properties"].copy()
-        segment_properties.update(dict(error_message=error_message))
+        segment_properties.update(dict(error_name=step_name, error_message=str(error_message)))
+        # its possible that this was an Authentication Failure, so it might not have user_id
         self.ctx.params["segment_session"].send_track(error_event_name, segment_properties,
-                                                      user_id=self.ctx.params['user_id'])
+                                                      user_id=self.ctx.params.get('user_id', None))
+
+    def send_track_abort(self, step_name, abort_message):
+        error_event_name = " - ".join([self.ctx.params["segment_event_prefix"], self.ctx.params["segment_subcommand"],
+                                 "ABORT"])
+        segment_properties = self.ctx.params["segment_event_properties"].copy()
+        segment_properties.update(dict(abort_name=step_name, abort_message=str(abort_message)))
+        # its possible that this was an Authentication Failure, so it might not have user_id
+        self.ctx.params["segment_session"].send_track(error_event_name, segment_properties,
+                                                      user_id=self.ctx.params.get('user_id', None))
 
 
 class SegmentSession:
@@ -99,4 +121,13 @@ class SegmentSession:
             analytics.alias(self.anonymous_id, user_id)
         except Exception as except_err:
             logger.error("Exception in send_identify while communicating to segment")
+            logger.exception(except_err)
+
+    def send_group(self, user_id, du_account_url):
+        try:
+            analytics.group(user_id, du_account_url, traits={'ddu_url_': 'DU', 'account_url_': du_account_url,
+                                                             'cli_last_executed_at': datetime.datetime.now().isoformat()},
+                            anonymous_id=self.anonymous_id)
+        except Exception as except_err:
+            logger.error("Exception in send_group while communicating to segment")
             logger.exception(except_err)

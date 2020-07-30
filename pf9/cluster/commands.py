@@ -89,8 +89,10 @@ def attach_cluster(cluster_name, master_ips, worker_ips, ctx):
     click.echo("Attaching to cluster {}".format(cluster_name))
     status, cluster_uuid = CreateCluster(ctx).cluster_exists()
     if not status:
-        click.secho("Cluster {} doesn't exist. Provide name of an existing cluster".format(
-                    ctx.params['cluster_name']), fg="red")
+        msg = "Cluster {} doesn't exist. Provide name of an existing cluster".format(
+                    ctx.params['cluster_name'])
+        click.secho(msg, fg="red")
+        SegmentSessionWrapper(ctx).send_track_error('Cluster Existence', msg)
         sys.exit(1)
 
     SegmentSessionWrapper(ctx).send_track("Validate Cluster Existence")
@@ -129,6 +131,7 @@ def attach_cluster(cluster_name, master_ips, worker_ips, ctx):
         except (ClusterAttachFailed, ClusterNotAvailable) as except_err:
             logger.exception(except_err)
             click.echo("Failed attaching master node(s) to cluster: {}".format(except_err))
+            raise except_err
     SegmentSessionWrapper(ctx).send_track("Attach Master Nodes")
 
     # attach worker nodes
@@ -137,7 +140,8 @@ def attach_cluster(cluster_name, master_ips, worker_ips, ctx):
             cluster_attacher.attach_to_cluster(cluster_uuid, 'worker', worker_nodes)
         except (ClusterAttachFailed, ClusterNotAvailable) as except_err:
             logger.exception(except_err)
-            click.echo("Failed attaching worker node(s) to cluster: {}".format(except_err))
+            click.echo("Failed attaching master node(s) to cluster: {}".format(except_err))
+            raise except_err
     SegmentSessionWrapper(ctx).send_track("Attach Worker Nodes")
 
 @click.group()
@@ -180,10 +184,6 @@ def create(ctx, **kwargs):
     """Create a Kubernetes cluster. Read more at http://pf9.io/cli_clcreate."""
     logger.info(msg=click.get_current_context().info_name)
 
-    # Load active config
-    Get(ctx).active_config()
-    Get(ctx).get_token_project_user_id()
-
     segment_session = SegmentSession()
     segment_event_properties = dict(arg_cluster_name=ctx.params['cluster_name'],
                                     arg_master_ips=ctx.params['master_ip'],
@@ -200,12 +200,23 @@ def create(ctx, **kwargs):
                                     arg_appCatalogEnabled=ctx.params.get('appcatalogenabled', None),
                                     arg_allowWorkloadsOnMaster=ctx.params.get('allowworkloadsonmaster', None),
                                     arg_networkPlugin=ctx.params.get('networkplugin', None),
-                                    arg_floating_ip=ctx.params.get('floating_ip', None),
-                                    keystone_user_id=ctx.params['user_id'],
-                                    du_account_url=ctx.params['du_url'])
+                                    arg_floating_ip=ctx.params.get('floating_ip', None))
     SegmentSessionWrapper(ctx).load_segment_session(segment_session, segment_event_properties, "Create Cluster")
+
+    try:
+        # Load active config
+        Get(ctx).active_config()
+        # Validate and get token
+        Get(ctx).get_token_project_user_id()
+    except Exception as e:
+        click.secho("Failed to create cluster {}. {}".format(ctx.params['cluster_name'], e.msg), fg="red")
+        SegmentSessionWrapper(ctx).send_track_error('Load Active config', e)
+        sys.exit(1)
+
+    SegmentSessionWrapper(ctx).reload_segment_session_with_auth()
     SegmentSessionWrapper(ctx).send_track("Load Active config")
     segment_session.send_identify(ctx.params['du_username'], ctx.params['user_id'])
+    segment_session.send_group(ctx.params['user_id'], ctx.params['du_url'])
 
     master_ips = ctx.params['master_ip']
     ctx.params['master_ip'] = ''.join(master_ips).split(' ') if all(len(x) == 1
@@ -285,6 +296,7 @@ def create(ctx, **kwargs):
         logger.exception("Cluster Create Failed")
         click.secho("Failed to create cluster {}. {}".format(
                     ctx.params['cluster_name'], e.msg), fg="red")
+        SegmentSessionWrapper(ctx).send_track_error('Cluster Create', e)
         sys.exit(1)
 
     response = ""
@@ -330,12 +342,9 @@ def bootstrap(ctx, **kwargs):
     """
     logger.info(msg=click.get_current_context().info_name)
 
-    # Load active config
-    Get(ctx).active_config()
-    Get(ctx).get_token_project_user_id()
-
     segment_session = SegmentSession()
-    segment_event_properties = dict(arg_cluster_name=ctx.params['cluster_name'], arg_masterVip=ctx.params.get('mastervip', None),
+    segment_event_properties = dict(arg_cluster_name=ctx.params['cluster_name'],
+                                    arg_masterVip=ctx.params.get('mastervip', None),
                                     arg_masterVipIf=ctx.params.get('mastervipif', None),
                                     arg_metallbIpRange=ctx.params.get('metallbiprange', None),
                                     arg_containersCidr=ctx.params.get('containerscidr', None),
@@ -345,18 +354,32 @@ def bootstrap(ctx, **kwargs):
                                     arg_appCatalogEnabled=ctx.params.get('appcatalogenabled', None),
                                     arg_allowWorkloadsOnMaster=ctx.params.get('allowworkloadsonmaster', None),
                                     arg_networkPlugin=ctx.params.get('networkplugin', None),
-                                    arg_floating_ip=ctx.params.get('floating_ip', None),
-                                    keystone_user_id=ctx.params['user_id'],
-                                    du_account_url=ctx.params['du_url'])
+                                    arg_floating_ip=ctx.params.get('floating_ip', None))
     SegmentSessionWrapper(ctx).load_segment_session(segment_session, segment_event_properties, "Bootstrap Cluster")
+
+    try:
+        # Load active config
+        Get(ctx).active_config()
+        # Validate Token
+        Get(ctx).get_token_project_user_id()
+    except Exception as e:
+        click.secho("Encountered an error while bootstrapping the local node to a Kubernetes" \
+                    " cluster. {}".format(e.msg), fg="red")
+        SegmentSessionWrapper(ctx).send_track_error('Load Active config', e)
+        sys.exit(1)
+
+    SegmentSessionWrapper(ctx).reload_segment_session_with_auth()
     SegmentSessionWrapper(ctx).send_track("Load Active config")
     segment_session.send_identify(ctx.params['du_username'], ctx.params['user_id'])
+    segment_session.send_group(ctx.params['user_id'], ctx.params['du_url'])
 
     prompt_msg = "Proceed with creating a Kubernetes cluster with the current node as the Kubernetes master [y/n]?"
     localnode_confirm = click.prompt(prompt_msg, default='y')
 
     if localnode_confirm.lower() == 'n':
         click.secho("Quitting...", fg="red")
+        SegmentSessionWrapper(ctx).send_track_abort('CLUSTER BOOTSTRAP',
+                                                    'Declined to proceed with creating a Kubernetes cluster with the current node as the Kubernetes master')
         sys.exit(1)
 
     try:
@@ -383,6 +406,7 @@ def bootstrap(ctx, **kwargs):
         logger.exception("Bootstrap Failed")
         click.secho("Encountered an error while bootstrapping the local node to a Kubernetes"\
                     " cluster. {}".format(e.msg), fg="red")
+        SegmentSessionWrapper(ctx).send_track_error('Bootstrap', 'Error while bootstrapping: {}'.format(e))
         sys.exit(1)
 
     SegmentSessionWrapper(ctx).send_track("Bootstrap Complete")
@@ -406,23 +430,32 @@ def attach_node(ctx, **kwargs):
     """
     logger.info(msg=click.get_current_context().info_name)
 
-    # Load active config
-    Get(ctx).active_config()
-    # Validate Token
-    Get(ctx).get_token_project_user_id()
-
     segment_session = SegmentSession()
     segment_event_properties = dict(arg_cluster_name=ctx.params['cluster_name'], arg_master_ips=ctx.params['master_ip'],
-                                    arg_worker_ips=ctx.params['worker_ip'], arg_floating_ip=ctx.params['floating_ip'],
-                                    keystone_user_id=ctx.params['user_id'],
-                                    du_account_url=ctx.params['du_url'])
+                                    arg_worker_ips=ctx.params['worker_ip'], arg_floating_ip=ctx.params['floating_ip'])
     SegmentSessionWrapper(ctx).load_segment_session(segment_session, segment_event_properties, "Attach Node")
-    SegmentSessionWrapper(ctx).send_track("Load Active config")
+
+    try:
+        # Load active config
+        Get(ctx).active_config()
+        # Validate Token
+        Get(ctx).get_token_project_user_id()
+    except Exception as e:
+        error_msg = "Encountered an error while attaching nodes to a Kubernetes" \
+                    " cluster {}. {}".format(ctx.params['cluster_name'], e.msg)
+        click.secho(error_msg, fg="red")
+        SegmentSessionWrapper(ctx).send_track_error('Load Active config', e)
+        sys.exit(1)
+
+    SegmentSessionWrapper(ctx).reload_segment_session_with_auth()
+    SegmentSessionWrapper(ctx).send_track('Load Active config')
     segment_session.send_identify(ctx.params['du_username'], ctx.params['user_id'])
+    segment_session.send_group(ctx.params['user_id'], ctx.params['du_url'])
 
     if not ctx.params['master_ip'] and not ctx.params['worker_ip']:
-        msg = "No nodes were specified to be attached to the cluster {}."
+        msg = "No nodes were specified to be attached to the cluster {}.".format(ctx.params['cluster_name'])
         click.secho(msg.format(ctx.params['cluster_name']), fg="red")
+        SegmentSessionWrapper(ctx).send_track_error('No Nodes', msg)
         sys.exit(1)
 
     master_ips = ()
@@ -448,8 +481,10 @@ def attach_node(ctx, **kwargs):
         SegmentSessionWrapper(ctx).send_track("Attach Cluster Complete")
     except CLIException as e:
         logger.exception("Cluster Attach Failed")
-        click.secho("Encountered an error while attaching nodes to a Kubernetes"\
-                    " cluster {}. {}".format(ctx.params['cluster_name'], e.msg), fg="red")
+        error_msg = "Encountered an error while attaching nodes to a Kubernetes"\
+                    " cluster {}. {}".format(ctx.params['cluster_name'], e.msg)
+        click.secho(error_msg, fg="red")
+        SegmentSessionWrapper(ctx).send_track_error('Cluster Attach', error_msg)
         sys.exit(1)
 
     click.secho("Successfully attached nodes to a Kubernetes cluster {} "\
@@ -474,24 +509,34 @@ def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
     """
     logger.info(msg=click.get_current_context().info_name)
 
-    # Load active config
-    Get(ctx).active_config()
-    # Validate Token
-    Get(ctx).get_token_project_user_id()
-
     segment_session = SegmentSession()
     segment_event_properties = dict(arg_user='REDACTED', arg_password='REDACTED', arg_ssh_key=ssh_key,
-                                    arg_ips=ips, arg_floating_ip=floating_ip, keystone_user_id=ctx.params['user_id'],
-                                    du_account_url=ctx.params['du_url'])
+                                    arg_ips=ips, arg_floating_ip=floating_ip)
     SegmentSessionWrapper(ctx).load_segment_session(segment_session, segment_event_properties, "Prep Node")
+
+    try:
+        # Load active config
+        Get(ctx).active_config()
+        # Validate Token
+        Get(ctx).get_token_project_user_id()
+    except Exception as e:
+        click.secho("Encountered an error while preparing the provided nodes as "
+                    "Kubernetes nodes. {}".format(e), fg="red")
+        SegmentSessionWrapper(ctx).send_track_error('Load Active config', e)
+        sys.exit(1)
+
+    SegmentSessionWrapper(ctx).reload_segment_session_with_auth()
     SegmentSessionWrapper(ctx).send_track('Load Active config')
     segment_session.send_identify(ctx.params['du_username'], ctx.params['user_id'])
+    segment_session.send_group(ctx.params['user_id'], ctx.params['du_url'])
 
     if not ips:
         prompt_msg = "No IPs provided. " \
                      "Proceed with preparing the current node to be added to a Kubernetes cluster [y/n]?"
         localnode_confirm = click.prompt(prompt_msg, default='y')
         if localnode_confirm.lower() == 'n':
+            SegmentSessionWrapper(ctx).send_track_abort('Prep Node',
+                                                        'Declined to proceed with preparing the current node to be added to a Kubernetes cluster')
             sys.exit(1)
         else:
             ips = ("localhost",)
@@ -510,6 +555,7 @@ def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
                     validate_ssh_details(user, password, ssh_key)
                 except CLIException as e:
                     logger.exception("SSH Validation Failed")
+                    SegmentSessionWrapper(ctx).send_track_error('SSH Validation', e.message)
                     click.secho(e.msg, fg="red")
                     print_help_msg(prepnode)
                     sys.exit(1)
@@ -525,6 +571,7 @@ def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
         logger.exception("Encountered an error while preparing the provided nodes as Kubernetes nodes.")
         click.secho("Encountered an error while preparing the provided nodes as "
                     "Kubernetes nodes. {}".format(e.msg), fg="red")
+        SegmentSessionWrapper(ctx).send_track_error('Prep Node', e.message)
         sys.exit(1)
 
     click.secho("Preparing the provided nodes to be added to Kubernetes cluster was successful",
