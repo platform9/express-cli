@@ -179,12 +179,15 @@ def cluster():
 @click.option("--networkPlugin", type=str, required=False, default='flannel',
               help="Specify network plugin (Possible values: flannel or calico, Default: flannel)")
 @click.option('--floating-ip', '-f', multiple=True, hidden=True)
+@click.option('--dev-key', is_flag=True)
+@click.option('--disable-analytics', is_flag=True)
 @click.pass_context
 def create(ctx, **kwargs):
     """Create a Kubernetes cluster. Read more at http://pf9.io/cli_clcreate."""
     logger.info(msg=click.get_current_context().info_name)
 
-    segment_session = SegmentSession()
+    segment_session = SegmentSession(use_dev_key=ctx.params.get('dev_key', False),
+                                     is_enabled=not ctx.params.get('disable_analytics', False))
     segment_event_properties = dict(arg_cluster_name=ctx.params['cluster_name'],
                                     arg_master_ips=ctx.params['master_ip'],
                                     arg_worker_ips=ctx.params['worker_ip'],
@@ -334,6 +337,8 @@ def create(ctx, **kwargs):
 @click.option("--networkPlugin", type=str, required=False, default='flannel',
               help="Specify network plugin (Possible values: flannel or calico, Default: flannel)")
 @click.option('--floating-ip', '-f', multiple=True, hidden=True)
+@click.option('--dev-key', is_flag=True)
+@click.option('--disable-analytics', is_flag=True)
 @click.pass_context
 def bootstrap(ctx, **kwargs):
     """
@@ -342,7 +347,8 @@ def bootstrap(ctx, **kwargs):
     """
     logger.info(msg=click.get_current_context().info_name)
 
-    segment_session = SegmentSession()
+    segment_session = SegmentSession(use_dev_key=ctx.params.get('dev_key', False),
+                                     is_enabled=not ctx.params.get('disable_analytics', False))
     segment_event_properties = dict(arg_cluster_name=ctx.params['cluster_name'],
                                     arg_masterVip=ctx.params.get('mastervip', None),
                                     arg_masterVipIf=ctx.params.get('mastervipif', None),
@@ -423,6 +429,8 @@ def bootstrap(ctx, **kwargs):
 @click.option('--worker-ip', '-w', multiple=True,
               help='IP of the node to be added as workers. Specify multiple IPs by repeating this option.')
 @click.option('--floating-ip', '-f', multiple=True, hidden=True)
+@click.option('--dev-key', is_flag=True)
+@click.option('--disable-analytics', is_flag=True)
 @click.pass_context
 def attach_node(ctx, **kwargs):
     """
@@ -430,7 +438,8 @@ def attach_node(ctx, **kwargs):
     """
     logger.info(msg=click.get_current_context().info_name)
 
-    segment_session = SegmentSession()
+    segment_session = SegmentSession(use_dev_key=ctx.params.get('dev_key', False),
+                                     is_enabled=not ctx.params.get('disable_analytics', False))
     segment_event_properties = dict(arg_cluster_name=ctx.params['cluster_name'], arg_master_ips=ctx.params['master_ip'],
                                     arg_worker_ips=ctx.params['worker_ip'], arg_floating_ip=ctx.params['floating_ip'])
     SegmentSessionWrapper(ctx).load_segment_session(segment_session, segment_event_properties, "Attach Node")
@@ -502,14 +511,16 @@ def attach_node(ctx, **kwargs):
 @click.option('--ips', '-i', multiple=True,
               help='IPs of the host to be prepared. Specify multiple IPs by repeating this option.')
 @click.option('--floating-ip', '-f', default=None, multiple=True, hidden=True)
+@click.option('--dev-key', is_flag=True)
+@click.option('--disable-analytics', is_flag=True)
 @click.pass_context
-def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
+def prepnode(ctx, user, password, ssh_key, ips, floating_ip, dev_key, disable_analytics):
     """
     Prepare a node to be ready to be added to a Kubernetes cluster. Read more at http://pf9.io/cli_clprep.
     """
     logger.info(msg=click.get_current_context().info_name)
 
-    segment_session = SegmentSession()
+    segment_session = SegmentSession(use_dev_key=dev_key, is_enabled=not disable_analytics)
     segment_event_properties = dict(arg_user='REDACTED', arg_password='REDACTED', arg_ssh_key=ssh_key,
                                     arg_ips=ips, arg_floating_ip=floating_ip)
     SegmentSessionWrapper(ctx).load_segment_session(segment_session, segment_event_properties, "Prep Node")
