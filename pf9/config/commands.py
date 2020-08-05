@@ -27,8 +27,10 @@ def config(ctx):
 @click.option('--os_password', required=True, prompt='Password', hide_input=True)
 @click.option('--os_region', required=True, prompt='Enter Region & Tenant Details (Freedom Plan requires RegionOne and service)\nRegion', default='RegionOne')
 @click.option('--os_tenant', required=True, prompt='Tenant', default='service')
+@click.option('--dev-key', is_flag=True)
+@click.option('--disable-analytics', is_flag=True)
 @click.pass_context
-def create(ctx, du_url, os_username, os_password, os_region, os_tenant):
+def create(ctx, du_url, os_username, os_password, os_region, os_tenant, dev_key, disable_analytics):
     """Create Platform9 management plane config."""
     # creates and activates pf9-express config file
     logger.info(msg=click.get_current_context().info_name)

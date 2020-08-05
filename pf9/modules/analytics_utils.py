@@ -9,8 +9,11 @@ from pf9.modules.util import Utils, Logger
 logger = Logger(os.path.join(os.path.expanduser("~"), 'pf9/log/pf9ctl.log')).get_logger(__name__)
 
 # the write_key is the Segment API authorization and identifier, without this no data submission will work.
-analytics.write_key = 'qDQpEaZQnDgqpXXG6jiV7OlZGqYZlQAa'
-
+# analytics.write_key = 'qDQpEaZQnDgqpXXG6jiV7OlZGqYZlQAa'
+# Project 'PRD - PMKFT CLI' in segment
+segment_prod_write_key = 'qDQpEaZQnDgqpXXG6jiV7OlZGqYZlQAa'
+# Project 'TEST - Python-testing-V2' in segment
+segment_dev_write_key = 't1tdSZocQ49Tx3G66lUjJXkOXjUSYRKx'
 
 class SegmentSessionWrapper:
     def __init__(self, ctx):
@@ -36,6 +39,13 @@ class SegmentSessionWrapper:
         segment_event_properties.update(du_account_url=self.ctx.params['du_url'])
         segment_event_properties.update(keystone_user_id=self.ctx.params['user_id'])
         self.ctx.params["segment_event_properties"] = segment_event_properties
+
+        # dev_key and disable_analytics needs to be reloaded after active_config is loaded to context
+        # which can potentially change these settings
+        if self.ctx.params.get('dev_key', False):
+            self.ctx.params["segment_session"].use_dev_write_key()
+        if self.ctx.params.get('disable_analytics', False):
+            self.ctx.params["segment_session"].disable_analytics()
 
     def send_track(self, step_name):
         """ Builds event name based on subcommand and step count
@@ -66,7 +76,7 @@ class SegmentSessionWrapper:
 
 class SegmentSession:
 
-    def __init__(self):
+    def __init__(self, use_dev_key=False, is_enabled=True):
         # unique for the device
         self.device_id = str(uuid.uuid3(uuid.NAMESPACE_DNS, str(uuid.getnode())))
 
@@ -76,6 +86,24 @@ class SegmentSession:
         # Session time is time in EPOC that must be passed to Segment in each track event to ensure that a single
         # session is maintained. The client side CLI should generate this and submit the string with each API submission
         self.session_time = math.floor(time.time())
+
+        # easy way to switch between prod and dev write keys
+        if use_dev_key:
+            self.write_key = segment_dev_write_key
+        else:
+            self.write_key = segment_prod_write_key
+        # Need to set the key into analytics module to take effect
+        analytics.write_key = self.write_key
+
+        # send_* calls will actually send data to segment only if is_enabled is True
+        self.is_enabled = is_enabled
+
+    def use_dev_write_key(self):
+        self.write_key = segment_dev_write_key
+        analytics.write_key = self.write_key
+
+    def disable_analytics(self):
+        self.is_enabled = False
 
     def send_track(self, event_name, event_properties, user_id=None):
         track_dict = {
@@ -91,43 +119,46 @@ class SegmentSession:
             track_dict['user_id'] = user_id
             track_user_id = user_id
         try:
-            analytics.track(track_user_id, event_name, track_dict,
-                anonymous_id=self.anonymous_id,
-                # The 'integrations array begin passed below is how the 'session' identifier is passed into Amplitude
-                integrations={
-                    'Amplitude': {
-                        'session_id': self.session_time
+            if self.is_enabled:
+                analytics.track(track_user_id, event_name, track_dict,
+                    anonymous_id=self.anonymous_id,
+                    # The 'integrations array begin passed below is how the 'session' identifier is passed into Amplitude
+                    integrations={
+                        'Amplitude': {
+                            'session_id': self.session_time
+                        }
                     }
-                }
-            )
+                )
         except Exception as except_err:
             logger.error("Exception in send_track while communicating to segment")
             logger.exception(except_err)
 
     def send_identify(self, email, user_id):
         try:
-            analytics.identify(user_id, {
-                'anonymous_id': self.anonymous_id,
-                'installation_id': self.device_id,
-                'email': email,
-                'user_id': user_id,
-                'deviceId': user_id,
-                # all DATE and TIME submissions need to be in ISO 8601 format
-                'createdAt': datetime.datetime.now().isoformat(),
-                },
-               anonymous_id=self.anonymous_id,
-            )
-            # Associate old unauthenticated events to post-authenticated events
-            analytics.alias(self.anonymous_id, user_id)
+            if self.is_enabled:
+                analytics.identify(user_id, {
+                    'anonymous_id': self.anonymous_id,
+                    'installation_id': self.device_id,
+                    'email': email,
+                    'user_id': user_id,
+                    'deviceId': user_id,
+                    # all DATE and TIME submissions need to be in ISO 8601 format
+                    'createdAt': datetime.datetime.now().isoformat(),
+                    },
+                   anonymous_id=self.anonymous_id,
+                )
+                # Associate old unauthenticated events to post-authenticated events
+                analytics.alias(self.anonymous_id, user_id)
         except Exception as except_err:
             logger.error("Exception in send_identify while communicating to segment")
             logger.exception(except_err)
 
     def send_group(self, user_id, du_account_url):
         try:
-            analytics.group(user_id, du_account_url, traits={'ddu_url_': 'DU', 'account_url_': du_account_url,
-                                                             'cli_last_executed_at': datetime.datetime.now().isoformat()},
-                            anonymous_id=self.anonymous_id)
+            if self.is_enabled:
+                analytics.group(user_id, du_account_url, traits={'ddu_url_': 'DU', 'account_url_': du_account_url,
+                                                                 'cli_last_executed_at': datetime.datetime.now().isoformat()},
+                                anonymous_id=self.anonymous_id)
         except Exception as except_err:
             logger.error("Exception in send_group while communicating to segment")
             logger.exception(except_err)

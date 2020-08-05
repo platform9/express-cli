@@ -98,6 +98,14 @@ parse_args() {
                 dev_build="--dev"
                 shift
                 ;;
+            --dev-key)
+                dev_key="--dev-key"
+                shift
+                ;;
+            --disable-analytics)
+                disable_analytics="--disable-analytics"
+                shift
+                ;;
             --local)
                 run_local="--local"
                 shift
@@ -257,11 +265,11 @@ create_cli_config(){
 	    stdout_log "Attempt $auth_retry of ${max_auth_retry}:"; fi
 
     if [ ! -z "${PF9_MGMTURL}" ] && [ ! -z "${PF9_USER}" ] && [ ! -z "${PF9_PASS}" ] && [ ! -z "${PF9_REGION}" ] && [ ! -z "${PF9_TENANT}" ]; then
-        eval "${cli_exec}" config create --du_url ${PF9_MGMTURL} --os_username ${PF9_USER} --os_password ${PF9_PASS} --os_region ${PF9_REGION} --os_tenant ${PF9_TENANT}
+        eval "${cli_exec}" config create --du_url ${PF9_MGMTURL} --os_username ${PF9_USER} --os_password ${PF9_PASS} --os_region ${PF9_REGION} --os_tenant ${PF9_TENANT} ${dev_key} ${disable_analytics}
     else
         echo ""
         stdout_log "Please provide your Platform9 Credentials"
-        eval "${cli_exec}" config create
+        eval "${cli_exec}" config create ${dev_key} ${disable_analytics}
     fi
 
 	if (${cli_exec} config validate); then

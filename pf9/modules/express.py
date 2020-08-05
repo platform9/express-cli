@@ -178,6 +178,16 @@ class Get:
                     self.ctx.params['du_password'] = config["os_password"]
                     self.ctx.params['du_tenant'] = config["os_tenant"]
                     self.ctx.params['du_region'] = config["os_region"]
+                    # This is needed if we want them to be loaded as python bool
+                    if config.get("dev_key") == 'True':
+                        self.ctx.params['dev_key'] = True
+                    else:
+                        self.ctx.params['dev_key'] = False
+                    if config.get("disable_analytics") == 'True':
+                        self.ctx.params['disable_analytics'] = True
+                    else:
+                        self.ctx.params['disable_analytics'] = False
+
                 return self.ctx
             except Exception as except_err:
                 except_msg = "Failed parsing active config {}: ".format(config_file)
@@ -227,6 +237,12 @@ class Get:
             if 'manage_resolver' in line:
                 line = line.strip()
                 config.update({'manage_resolver': line.replace('manage_resolver|', '')})
+            if 'dev_key' in line:
+                line = line.strip()
+                config.update({'dev_key': line.replace('dev_key|', '')})
+            if 'disable_analytics' in line:
+                line = line.strip()
+                config.update({'disable_analytics': line.replace('disable_analytics|', '')})
         return config
 
 
