@@ -42,7 +42,7 @@ def cli(ctx):
 # Any commands defined here or added will be toplevel
 
 
-cli.add_command(version)
+# cli.add_command(version)
 cli.add_command(config)
 cli.add_command(support)
 cli.add_command(cluster)
