@@ -110,7 +110,15 @@ def create(ctx, silent, host, offline, mgmt_plane):
         offline = True
 
     use_localhost = False
-    bundle_exec = 'python /opt/pf9/hostagent/lib/python2.7/site-packages/datagatherer/datagatherer.py'
+    datagatherer_py3 = '/opt/pf9/hostagent/lib/python3.6/site-packages/datagatherer/datagatherer.py'
+    datagatherer_py2 = '/opt/pf9/hostagent/lib/python2.7/site-packages/datagatherer/datagatherer.py'
+    if os.path.isfile(datagatherer_py3):
+        bundle_exec = 'python {}'.format(datagatherer_py3)
+    elif os.path.isfile(datagatherer_py2):
+        bundle_exec = 'python {}'.format(datagatherer_py2)
+    else:
+        # Just attempt the py3 path (and fail if it doesn't exist)
+        bundle_exec = 'python {}'.format(datagatherer_py3)
     if not host or host in ['localhost', '127.0.0.1']:
         use_localhost = click.prompt("Use localhost? [y/n]", default='y')
         if use_localhost.lower() == 'y':
