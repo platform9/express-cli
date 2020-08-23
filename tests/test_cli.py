@@ -6,7 +6,7 @@ import logging
 import inspect
 from subprocess import PIPE, Popen as popen
 
-from unittest import TestCase
+from unittest import TestCase, skip
 from click.testing import CliRunner
 
 from pf9 import __version__
@@ -23,6 +23,7 @@ class TestHelp(TestCase):
 
 class TestExpCliVersion(TestCase):
     """Test express --version call"""
+    @skip("Skip disabled CLI version command")
     def test_returns_version_information(self):
         """Test express --version call"""
         runner = CliRunner()
