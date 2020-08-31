@@ -129,6 +129,7 @@ def activate(ctx, config_name):
     click.echo("Activating config %s" % config_name)
     exp_conf_dir = ctx.obj['pf9_db_dir']
     exp_conf_file = ctx.obj['pf9_db_dir'] + 'express.conf'
+    active_config_name = ""
 
     # Get all config files
     config_files = [f for f in os.listdir(exp_conf_dir)
@@ -165,7 +166,7 @@ def activate(ctx, config_name):
         if active_config_name:
             logger.info(msg='Config %s remains active' % active_config_name)
             click.echo('Config %s remains active' % active_config_name)
-            shutil.move(active_config_name, exp_conf_file)
+            shutil.move(exp_conf_dir + active_config_name + '.conf', exp_conf_file)
         else:
             click.echo('Use an existing config or create a new one.')
             ctx.invoke(list)
