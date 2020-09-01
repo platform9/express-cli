@@ -179,7 +179,17 @@ init_venv_python() {
             debugging "ERROR: failed to install python package (attempting to install via 'sudo pip install virtualenv')"
             if ! (sudo pip${pyver} install virtualenv --user --ignore-installed > /dev/null 2>&1); then
                 assert "Please install the 'virtualenv' module using 'pip install virtualenv'"
+            else
+                # Fix setuptools to be below a certain version to workaround this issue
+                # https://github.com/pypa/setuptools/issues/2352
+                debugging "INFO: sudo pip${pyver} install setuptools<50.0 --force-reinstall > /dev/null 2>&1"
+                sudo pip${pyver} install "setuptools<50.0" --force-reinstall > /dev/null 2>&1
             fi
+        else
+            # Fix setuptools to be below a certain version to workaround this issue
+            # https://github.com/pypa/setuptools/issues/2352
+            debugging "INFO: ${local_pip}${pyver} install setuptools<50.0 --force-reinstall > /dev/null 2>&1"
+            sudo ${local_pip}${pyver} install "setuptools<50.0" --force-reinstall > /dev/null 2>&1
         fi
     fi
     debugging "INFO: ${local_virtualenv} -p python${pyver} --system-site-packages ${venv} > /dev/null 2>&1"
@@ -420,7 +430,9 @@ else
 fi
 
 stdout_log "Upgrading pip"
-if ! (${venv_python} -m pip install --upgrade --ignore-installed pip setuptools wheel >> ${log_file} 2>&1); then
+# Fix setuptools to be below a certain version to workaround this issue
+# https://github.com/pypa/setuptools/issues/2352
+if ! (${venv_python} -m pip install --upgrade --ignore-installed pip "setuptools<50.0" wheel >> ${log_file} 2>&1); then
     assert "Pip upgrade failed"; fi
 debugging "pip install express-cli completed"
 
