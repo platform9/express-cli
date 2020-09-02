@@ -208,7 +208,7 @@ def create(ctx, **kwargs):
         Get(ctx).active_config()
         # Validate and get token
         Get(ctx).get_token_project_user_id()
-    except Exception as e:
+    except CLIException as e:
         click.secho("Failed to create cluster {}. {}".format(ctx.params['cluster_name'], e.msg), fg="red")
         SegmentSessionWrapper(ctx).send_track_error('Load Active config', e)
         sys.exit(1)
@@ -362,7 +362,7 @@ def bootstrap(ctx, **kwargs):
         Get(ctx).active_config()
         # Validate Token
         Get(ctx).get_token_project_user_id()
-    except Exception as e:
+    except CLIException as e:
         click.secho("Encountered an error while bootstrapping the local node to a Kubernetes" \
                     " cluster. {}".format(e.msg), fg="red")
         SegmentSessionWrapper(ctx).send_track_error('Load Active config', e)
@@ -440,7 +440,7 @@ def attach_node(ctx, **kwargs):
         Get(ctx).active_config()
         # Validate Token
         Get(ctx).get_token_project_user_id()
-    except Exception as e:
+    except CLIException as e:
         error_msg = "Encountered an error while attaching nodes to a Kubernetes" \
                     " cluster {}. {}".format(ctx.params['cluster_name'], e.msg)
         click.secho(error_msg, fg="red")
@@ -454,7 +454,7 @@ def attach_node(ctx, **kwargs):
 
     if not ctx.params['master_ip'] and not ctx.params['worker_ip']:
         msg = "No nodes were specified to be attached to the cluster {}.".format(ctx.params['cluster_name'])
-        click.secho(msg.format(ctx.params['cluster_name']), fg="red")
+        click.secho(msg, fg="red")
         SegmentSessionWrapper(ctx).send_track_error('No Nodes', msg)
         sys.exit(1)
 
@@ -519,7 +519,7 @@ def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
         Get(ctx).active_config()
         # Validate Token
         Get(ctx).get_token_project_user_id()
-    except Exception as e:
+    except CLIException as e:
         click.secho("Encountered an error while preparing the provided nodes as "
                     "Kubernetes nodes. {}".format(e), fg="red")
         SegmentSessionWrapper(ctx).send_track_error('Load Active config', e)
@@ -555,7 +555,7 @@ def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
                     validate_ssh_details(user, password, ssh_key)
                 except CLIException as e:
                     logger.exception("SSH Validation Failed")
-                    SegmentSessionWrapper(ctx).send_track_error('SSH Validation', e.message)
+                    SegmentSessionWrapper(ctx).send_track_error('SSH Validation', e)
                     click.secho(e.msg, fg="red")
                     print_help_msg(prepnode)
                     sys.exit(1)
@@ -571,7 +571,7 @@ def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
         logger.exception("Encountered an error while preparing the provided nodes as Kubernetes nodes.")
         click.secho("Encountered an error while preparing the provided nodes as "
                     "Kubernetes nodes. {}".format(e.msg), fg="red")
-        SegmentSessionWrapper(ctx).send_track_error('Prep Node', e.message)
+        SegmentSessionWrapper(ctx).send_track_error('Prep Node', e)
         sys.exit(1)
 
     click.secho("Preparing the provided nodes to be added to Kubernetes cluster was successful",
