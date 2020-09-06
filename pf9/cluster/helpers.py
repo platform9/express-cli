@@ -1,5 +1,6 @@
 import re
 import netifaces
+import ipaddress
 from .exceptions import SSHInfoMissing, MissingVIPDetails
 
 
@@ -23,7 +24,7 @@ def validate_ssh_details(user, password, ssh_key):
 
 def get_local_node_addresses():
     """
-    Get non local IPv4 addresses
+    Get non local IPv4/IPV6 addresses
     """
     nw_ifs = netifaces.interfaces()
     nonlocal_ips = set()
@@ -34,19 +35,24 @@ def get_local_node_addresses():
         if ignore_if_re.match(iface):
             continue
         addrs = netifaces.ifaddresses(iface)
-        try:
-            if netifaces.AF_INET in addrs:
-                ips = addrs[netifaces.AF_INET]
-                for ip in ips:
-                    # Not interested in loopback IPs
-                    if not ignore_ip_re.match(ip['addr']):
-                        nonlocal_ips.add(ip['addr'])
-            else:
-                # move to next interface if this interface doesn't
-                # have IPv4 addresses
+        
+        ips = []
+        if netifaces.AF_INET in addrs:
+            ips.extend(addrs[netifaces.AF_INET])
+        if netifaces.AF_INET6 in addrs:
+            ips.extend(addrs[netifaces.AF_INET6])
+        
+        for ip in ips:
+            try:
+                ip_addr = ipaddress.ip_address(ip['addr'])
+            except ValueError:
+                # the link local sometime appears to have an invalid prefix
+                # ignore those interfaces
                 continue
-        except KeyError:
-            pass
+            # Add non-link local/loopback or multicast ip addresses
+            if not (ip_addr.is_loopback or ip_addr.is_link_local or ip_addr.is_multicast):
+                nonlocal_ips.add(ip['addr'])
+        
 
     return list(nonlocal_ips)
 
