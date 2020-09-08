@@ -19,7 +19,7 @@ logger = Logger(os.path.join(os.path.expanduser("~"), 'pf9/log/pf9ctl.log')).get
 class ResMgr:
     """express.ResMgr(ctx) contains methods to interact with Platform9 Reservation Manager"""
     def __init__(self, region_url, token):
-        self.region_url = region_url 
+        self.region_url = region_url
         self.token = token
 
     def get_hosts(self):
@@ -99,7 +99,7 @@ class Get:
         except CLIException as except_err:
             logger.exception(except_err)
             raise except_err
-        
+
     def get_token(self):
         """Calls ostoken.GetToken.get_token_v3 using active config
                 return token
@@ -269,7 +269,7 @@ class PrepExpressRun:
                 except_msg = "Number of floating IPs does not match nodes provided"
                 raise CLIException(except_msg)
 
-    def build_ansible_command(self):
+    def build_ansible_command(self, verbose=False):
         """Build the bash command that will be sent to pf9-express"""
         # Invoke PMK only related playbook.
         # TODO: rework to allow for PMO/PMK or deauth. In this function or another
@@ -295,9 +295,12 @@ class PrepExpressRun:
                       self.ctx.params['du_region'],
                       self.ctx.params['du_tenant'],
                       self.ctx.params['token'])
+
+        ansible_cmd = self.ctx.obj['pf9_exec_ansible-playbook']
+        if verbose:
+            ansible_cmd = ansible_cmd + ' -vvvv'
         cmd = '{} -i {} -l pmk {} {}' \
-              .format(
-                      self.ctx.obj['pf9_exec_ansible-playbook'],
+              .format(ansible_cmd,
                       _inv_file,
                       extra_args,
                       self.ctx.obj['pf9_k8_playbook'])

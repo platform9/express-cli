@@ -19,7 +19,7 @@ from ..modules.analytics_utils import SegmentSession, SegmentSessionWrapper
 logger = Logger(os.path.join(os.path.expanduser("~"), 'pf9/log/pf9ctl.log')).get_logger(__name__)
 
 
-def prep_node(ctx, user, password, ssh_key, ips, node_prep_only):
+def prep_node(ctx, user, password, ssh_key, ips, verbose,  node_prep_only):
     # TODO: Filter all nodes against regmgr. If they have role[pf9_kube] and role_status: ok. Remove from inventory
     if len(ips) == 1 and ips[0] == 'localhost':
         logger.info('Preparing the local node to be added to Platform9 Managed Kubernetes')
@@ -29,11 +29,11 @@ def prep_node(ctx, user, password, ssh_key, ips, node_prep_only):
                                      'templates',
                                      'pmk_inventory.tpl')
     cmd = PrepExpressRun(ctx, user, password, ssh_key, ips, node_prep_only, inv_file_template
-                         ).build_ansible_command()
+                         ).build_ansible_command(verbose)
     log_file = os.path.join(ctx.obj['pf9_log_dir'],
                             datetime.now().strftime('node_provision_%Y_%m_%d-%H_%M_%S.log'))
     os.environ['ANSIBLE_CONFIG'] = ctx.obj['pf9_ansible_cfg']
-    
+
     SegmentSessionWrapper(ctx).send_track('Prep Express Run')
 
     # Progress bar logic: estimate total time, while cmd_proc running, poll at interval, refreshing progbar
@@ -178,6 +178,7 @@ def cluster():
               help="Taint master nodes (to enable workloads)")
 @click.option("--networkPlugin", type=str, required=False, default='flannel',
               help="Specify network plugin (Possible values: flannel or calico, Default: flannel)")
+@click.option('--verbose', type=bool, required=False, default=False, hidden=True)
 @click.option('--floating-ip', '-f', multiple=True, hidden=True)
 @click.pass_context
 def create(ctx, **kwargs):
@@ -200,6 +201,7 @@ def create(ctx, **kwargs):
                                     arg_appCatalogEnabled=ctx.params.get('appcatalogenabled', None),
                                     arg_allowWorkloadsOnMaster=ctx.params.get('allowworkloadsonmaster', None),
                                     arg_networkPlugin=ctx.params.get('networkplugin', None),
+                                    arg_verbose=ctx.params.get('verbose', None),
                                     arg_floating_ip=ctx.params.get('floating_ip', None))
     SegmentSessionWrapper(ctx).load_segment_session(segment_session, segment_event_properties, "Create Cluster")
 
@@ -259,6 +261,7 @@ def create(ctx, **kwargs):
             # Will throw in case of failed run
             prep_node(ctx, ctx.params['user'], ctx.params['password'],
                                         ctx.params['ssh_key'], adj_ips,
+                                        ctx.params.get('verbose', False),
                                         node_prep_only=True)
             SegmentSessionWrapper(ctx).send_track("Prep Node")
 
@@ -333,6 +336,7 @@ def create(ctx, **kwargs):
               help="Taint master nodes (to enable workloads), Default: True")
 @click.option("--networkPlugin", type=str, required=False, default='flannel',
               help="Specify network plugin (Possible values: flannel or calico, Default: flannel)")
+@click.option('--verbose', type=bool, required=False, default=False, hidden=True)
 @click.option('--floating-ip', '-f', multiple=True, hidden=True)
 @click.pass_context
 def bootstrap(ctx, **kwargs):
@@ -354,6 +358,7 @@ def bootstrap(ctx, **kwargs):
                                     arg_appCatalogEnabled=ctx.params.get('appcatalogenabled', None),
                                     arg_allowWorkloadsOnMaster=ctx.params.get('allowworkloadsonmaster', None),
                                     arg_networkPlugin=ctx.params.get('networkplugin', None),
+                                    arg_verbose=ctx.params.get('verbose', None),
                                     arg_floating_ip=ctx.params.get('floating_ip', None))
     SegmentSessionWrapper(ctx).load_segment_session(segment_session, segment_event_properties, "Bootstrap Cluster")
 
@@ -385,7 +390,7 @@ def bootstrap(ctx, **kwargs):
     try:
 
         # This will throw when the prep node fails
-        prep_node(ctx, None, None, None, ('localhost',), node_prep_only=True)
+        prep_node(ctx, None, None, None, ('localhost',), ctx.params.get('verbose', False), node_prep_only=True)
         SegmentSessionWrapper(ctx).send_track("Prep Node Complete")
 
         cluster_uuid = create_cluster(ctx)
@@ -501,9 +506,10 @@ def attach_node(ctx, **kwargs):
               help='SSH key for nodes.')
 @click.option('--ips', '-i', multiple=True,
               help='IPs of the host to be prepared. Specify multiple IPs by repeating this option.')
+@click.option('--verbose', type=bool, required=False, default=False, hidden=True)
 @click.option('--floating-ip', '-f', default=None, multiple=True, hidden=True)
 @click.pass_context
-def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
+def prepnode(ctx, user, password, ssh_key, ips, verbose, floating_ip):
     """
     Prepare a node to be ready to be added to a Kubernetes cluster. Read more at http://pf9.io/cli_clprep.
     """
@@ -564,7 +570,7 @@ def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
 
         SegmentSessionWrapper(ctx).send_track('Node IPs validation')
 
-        prep_node(ctx, user, password, ssh_key, adj_ips, node_prep_only=True)
+        prep_node(ctx, user, password, ssh_key, adj_ips, verbose, node_prep_only=True)
 
         SegmentSessionWrapper(ctx).send_track('Prep Node Complete')
     except CLIException as e:
