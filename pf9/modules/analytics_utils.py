@@ -15,6 +15,19 @@ segment_prod_write_key = 'qDQpEaZQnDgqpXXG6jiV7OlZGqYZlQAa'
 # Project 'TEST - Python-testing-V2' in segment
 segment_dev_write_key = 't1tdSZocQ49Tx3G66lUjJXkOXjUSYRKx'
 
+
+def strip_account_url(account_url):
+    """
+        Remove http/https for an URL
+    """
+    if account_url:
+        if 'https://' in account_url:
+            account_url = account_url.split('https://')[1]
+        elif 'http://' in account_url:
+            account_url = account_url.split('http://')[1]
+    return account_url
+
+
 class SegmentSessionWrapper:
     def __init__(self, ctx):
         self.ctx = ctx
@@ -36,7 +49,7 @@ class SegmentSessionWrapper:
             and pre config load, during which we wont have keystone user_id / du_account_url.
         """
         segment_event_properties = self.ctx.params["segment_event_properties"]
-        segment_event_properties.update(du_account_url=self.ctx.params['du_url'])
+        segment_event_properties.update(du_account_url=strip_account_url(self.ctx.params['du_url']))
         segment_event_properties.update(keystone_user_id=self.ctx.params['user_id'])
         self.ctx.params["segment_event_properties"] = segment_event_properties
 
@@ -156,7 +169,8 @@ class SegmentSession:
     def send_group(self, user_id, du_account_url):
         try:
             if self.is_enabled:
-                analytics.group(user_id, du_account_url, traits={'ddu_url_': 'DU', 'account_url_': du_account_url,
+                analytics.group(user_id, du_account_url, traits={'ddu_url_': 'DU',
+                                                                 'account_url_': strip_account_url(du_account_url),
                                                                  'cli_last_executed_at': datetime.datetime.now().isoformat()},
                                 anonymous_id=self.anonymous_id)
         except Exception as except_err:
