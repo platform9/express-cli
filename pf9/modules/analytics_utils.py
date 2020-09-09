@@ -169,7 +169,7 @@ class SegmentSession:
     def send_group(self, user_id, du_account_url):
         try:
             if self.is_enabled:
-                analytics.group(user_id, du_account_url, traits={'ddu_url_': 'DU',
+                analytics.group(user_id, strip_account_url(du_account_url), traits={'ddu_url_': 'DU',
                                                                  'account_url_': strip_account_url(du_account_url),
                                                                  'cli_last_executed_at': datetime.datetime.now().isoformat()},
                                 anonymous_id=self.anonymous_id)
