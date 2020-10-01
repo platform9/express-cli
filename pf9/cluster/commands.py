@@ -13,9 +13,10 @@ from pf9.cluster.exceptions import PrepNodeFailed, ClusterNotAvailable, ClusterA
 from pf9.cluster.helpers import validate_ssh_details, get_local_node_addresses, check_vip_needed, print_help_msg
 from pf9.cluster.cluster_create import CreateCluster
 from pf9.cluster.cluster_attach import AttachCluster
+#from pf9.cluster.zendesk import CreateTicket
 from ..modules.express import Get
 from ..modules.analytics_utils import SegmentSession, SegmentSessionWrapper
-
+from pf9.support.generate_bundle import Log_Bundle
 logger = Logger(os.path.join(os.path.expanduser("~"), 'pf9/log/pf9ctl.log')).get_logger(__name__)
 
 
@@ -33,7 +34,7 @@ def prep_node(ctx, user, password, ssh_key, ips, node_prep_only):
     log_file = os.path.join(ctx.obj['pf9_log_dir'],
                             datetime.now().strftime('node_provision_%Y_%m_%d-%H_%M_%S.log'))
     os.environ['ANSIBLE_CONFIG'] = ctx.obj['pf9_ansible_cfg']
-    
+
     SegmentSessionWrapper(ctx).send_track('Prep Express Run')
 
     # Progress bar logic: estimate total time, while cmd_proc running, poll at interval, refreshing progbar
@@ -57,7 +58,9 @@ def prep_node(ctx, user, password, ssh_key, ips, node_prep_only):
 
         if cmd_proc.returncode:
             msg = "Code: {}, output log: {}".format(cmd_proc.returncode, log_file)
-            raise PrepNodeFailed(msg)
+
+            raise PrepNodeFailed(msg,ctx,ips)
+
 
         return cmd_proc.returncode, log_file
 
@@ -341,7 +344,7 @@ def bootstrap(ctx, **kwargs):
     Read more at http://pf9.io/cli_clbootstrap.
     """
     logger.info(msg=click.get_current_context().info_name)
-
+    print (ctx.params)
     segment_session = SegmentSession()
     segment_event_properties = dict(arg_cluster_name=ctx.params['cluster_name'],
                                     arg_masterVip=ctx.params.get('mastervip', None),
@@ -406,6 +409,7 @@ def bootstrap(ctx, **kwargs):
         logger.exception("Bootstrap Failed")
         click.secho("Encountered an error while bootstrapping the local node to a Kubernetes"\
                     " cluster. {}".format(e.msg), fg="red")
+
         SegmentSessionWrapper(ctx).send_track_error('Bootstrap', 'Error while bootstrapping: {}'.format(e))
         sys.exit(1)
 
@@ -549,6 +553,7 @@ def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
         for ip in parse_ips:
             if ip == "127.0.0.1" or ip == "localhost" or ip in get_local_node_addresses():
                 adj_ips = adj_ips + ("localhost",)
+
             else:
                 # check if ssh creds are provided.
                 try:
@@ -562,16 +567,20 @@ def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
 
                 adj_ips = adj_ips + (ip,)
 
+
         SegmentSessionWrapper(ctx).send_track('Node IPs validation')
 
         prep_node(ctx, user, password, ssh_key, adj_ips, node_prep_only=True)
 
         SegmentSessionWrapper(ctx).send_track('Prep Node Complete')
     except CLIException as e:
+
         logger.exception("Encountered an error while preparing the provided nodes as Kubernetes nodes.")
         click.secho("Encountered an error while preparing the provided nodes as "
                     "Kubernetes nodes. {}".format(e.msg), fg="red")
+
         SegmentSessionWrapper(ctx).send_track_error('Prep Node', e)
+
         sys.exit(1)
 
     click.secho("Preparing the provided nodes to be added to Kubernetes cluster was successful",
