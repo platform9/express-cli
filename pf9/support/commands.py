@@ -14,7 +14,7 @@ import ipaddress
 import paramiko.ssh_exception
 import socket
 import invoke.exceptions
-
+from pf9.support.generate_bundle import Log_Bundle
 from pf9.exceptions import DUCommFailure, CLIException, UserAuthFailure
 from pf9.modules.express import Get
 from pf9.modules.util import Utils, Logger, Pf9ExpVersion
@@ -101,6 +101,7 @@ def bundle():
 @click.pass_context
 def create(ctx, silent, host, offline, mgmt_plane):
     """Request Creation of a Platform9 Support"""
+    #Get(ctx).active_config()
     if offline and mgmt_plane:
         click.echo("--mgmt-plane and --offline are not mutually exclusive.\n"
                    "Only one may be set")
@@ -140,6 +141,10 @@ def create(ctx, silent, host, offline, mgmt_plane):
                     click.echo("Generation of support bundle complete on:\n"
                                "Host: localhost")
                     click.echo(check_bundle_out)
+                    Get(ctx).active_config()
+                    log_upload_s3 = Log_Bundle()
+                    du_url = ctx.params['du_url']
+                    log_upload_s3.upload_logs(du_url)
                     exit(0)
                 else:
                     click.echo("Support Bundle Creation Failed:")
@@ -164,6 +169,10 @@ def create(ctx, silent, host, offline, mgmt_plane):
                     ssh_conn.close()
                 click.echo("\n\n")
                 click.echo("Generation of support bundle complete on:\n Host: " + host)
+                log_upload_s3 = Log_Bundle()
+                Get(ctx).active_config()
+                du_url = ctx.params['du_url']
+                log_upload_s3.remote_host_upload(du_url,ssh_conn,host)
                 click.echo(ssh_result_bundle.stdout.strip())
                 # I don't like this exit point
                 # needs to return to bottom
@@ -190,6 +199,7 @@ def create(ctx, silent, host, offline, mgmt_plane):
                 ssh_conn = Connection(host=host,
                                       user=user_name,
                                       port=22,
+
                                       connect_kwargs=ssh_auth,
                                       config=config)
 
