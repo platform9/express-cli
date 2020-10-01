@@ -24,11 +24,11 @@ class Log_Bundle:
     def __init__(self,error_msg="none"):
         self.error_msg = error_msg
 #       self.host = "127.0.0.1"
-
-    def get_uuid_from_resmgr(self,du_url,host_ip,headers):
+        
+    def get_uuid_from_resmgr(self,du_url,host_ip,headers): 
 
     #Based on the host_ip this function would pull the host UUID from resmgr.
-
+        
         try:
             api_endpoint = "resmgr/v1/hosts"
             pf9_response = requests.get("{}/{}".format(du_url,api_endpoint),
@@ -62,33 +62,38 @@ class Log_Bundle:
         headers = {'Content-Type': 'application/json', 'X-Auth-Token': token}
 
         for host in ips:
-            #If the host provided is local host
-            # get ip of the localhost and get the hostname
-
-            if host in ['127.0.0.1','localhost']:
-                hostname=socket.gethostname()
-                ip=socket.gethostbyname(hostname)
-            # get host uuid from resmgr using the ip of the localhost
+            #If the host provided is local host 
+            # get ip of the localhost and get the hostname 
+            
+            if host in ['127.0.0.1','localhost']: 
+                hostname=socket.gethostname()  
+                ip=socket.gethostbyname(hostname)  
+            # get host uuid from resmgr using the ip of the localhost 
                 host_uuid[ip]=self.get_uuid_from_resmgr(du_url,ip,headers)
-
-                if host_uuid[ip]:
-                # if a valid uuid is found , hostagent is configured and we can pull the support bundle from the host
+              
+                if host_uuid[ip]: 
+                # if a valid uuid is found , hostagent is configured and we can pull the support bundle from the host    
                     resmgr_endpoint = '{}/resmgr/v1/hosts/{}'.format(ctx.params['du_url'],host_uuid[ip])
-
+                  
                     resmgr_get_hosts = requests.get(resmgr_endpoint,verify=False,headers=headers)
                     data = resmgr_get_hosts.json()
                     roles = (data["roles"])
-                    responding = (data["info"]["responding"])
+                    #responding = (data["info"]["responding"])
 
-                    if responding and roles[0] == "pf9-kube":
-                        pass
+                    if len(roles) >= 1 :
+                        if roles[0] == "pf9-kube" and data["info"]["responding"] == "true":  # Responding key will only be there is pf9-kube is installed else there will not be any responding key in response
+                            pass 
+                        else:
+                            click.secho("PF9 Installation failed for the host: {}\n".format(host))
+                            time.sleep(2)                            
+                            self.create_log_bundle(ctx,host)
                     else:
                         click.secho("PF9 Installation failed for the host: {}\n".format(host))
                         time.sleep(2)
                         self.create_log_bundle(ctx,host)
                 else:
-                # if a valid uuid not found in resmgr from the host , hostganet is not installled and support bunndle cant be generated
-                # uploading pf9ctl logs in this case
+                # if a valid uuid not found in resmgr from the host , hostganet is not installled and support bunndle cant be generated 
+                # uploading pf9ctl logs in this case 
                     answer = click.prompt ("pf9ctl Prep-Node failed. Do you want to share pf9ctl logs with Platform9 (y/n)", default='y')
                     if answer == "y" or answer == "yes":
                         self.upload_pf9cli_logs (du_url,host)
@@ -96,55 +101,61 @@ class Log_Bundle:
                         click.secho("pf9ctl Prep-Node failed. Contact Platform9 Support at <support@platform9.com>")
 
 
-
+            
             # host provided in not localhost, get host uuid from resmgr using the ip
-            else:
+            else: 
                 host_uuid[host]=self.get_uuid_from_resmgr(du_url,host,headers)
-                if host_uuid[host]:
+                if host_uuid[host]: 
                     resmgr_endpoint = '{}/resmgr/v1/hosts/{}'.format(ctx.params['du_url'],host_uuid[host])
-
+                  
                     resmgr_get_hosts = requests.get(resmgr_endpoint,verify=False,headers=headers)
                     data = resmgr_get_hosts.json()
+                    
                     roles = (data["roles"])
+                
+                    #responding = (data["info"]["responding"])
 
-                    responding = (data["info"]["responding"])
-
-                    if responding and roles[0] == "pf9-kube":
-                        pass
+                    if len(roles) >= 1:
+                        if roles[0] == "pf9-kube" and data["info"]["responding"] == "true": # Responding key will only be there is pf9-kube is installed else there will not be any responding key in response
+                            pass 
+                        else:
+                            self.create_log_bundle(ctx,host)       
                     else:
                         self.create_log_bundle(ctx,host)
                 else:
-                # if a valid uuid not found in resmgr from the host , hostganet is not installled and support bunndle cant be generated
+                # if a valid uuid not found in resmgr from the host , hostganet is not installled and support bunndle cant be generated 
                 # uploading pf9ctl logs in this case
-                    click.secho ("pf9ctl Prep-Node failed for node: {} \npf9ctl logs will be shared with Platform9 now\n".format(host), fg="red")
+                    click.secho ("\n\npf9ctl Prep-Node failed for node: {} \npf9ctl logs will be shared with Platform9 now\n".format(host), fg="red")
                     self.upload_pf9cli_logs (du_url,host)
 
 
-        return None
+        return None          
 
     def upload_pf9cli_logs (self,du_url,host):
-    #function for uploading pf9cli logs in case support bundle cant be generated
+    #function for uploading pf9cli logs in case support bundle cant be generated 
         log_path = str(self.error_msg)
         filename = log_path.split(":")[2].lstrip()
+        cli_logs="/root/pf9/log/pf9ctl.log"
         #host = socket.getfqdn()    ## Made changes as we are now getting host information in parameter: host
         du_url = du_url.replace("https://","")
 #        filename = path.replace("Code: 4, output log: ","")
-        S3_location = "http://uploads.platform9.com.s3-us-west-1.amazonaws.com/"+str(du_url)+"/"+str(host)+"/"
+        S3_location = "https://sheda-pf9ctl-log-testing.s3-us-west-1.amazonaws.com/"+str(du_url)+"/"+str(host)+"/"
         try:
-
+             
             click.secho("Uploading the pf9cli log file {}\n".format(filename),fg="green")
             with Bar('Uploading', max=100) as bar:
                 for i in range(100):
                     cmd = subprocess.run(["curl", "-T", filename, S3_location])
+                    cmd = subprocess.run(["curl", "-T", cli_logs, S3_location])
                     # self.create_os_information(S3_location)
                     bar.next()
             #time.sleep(2)
-            click.secho("\nUploaded the pf9cli log files at {}".format(S3_location),
+            click.secho("\nUploaded the pf9ctl log files at {}".format(S3_location),
                         fg="green")
         except Exception as e:
            click.secho(e)
            click.secho("File uploading failed with error")
-
+        
         return None
 
     def create_log_bundle(self,ctx,host='none'):
@@ -153,10 +164,10 @@ class Log_Bundle:
 
         Get(ctx).active_config()
         du_url = ctx.params['du_url']
-        ips = ctx.params['ips']
+        #ips = ctx.params['ips']     
         upload_logs =  True
         use_localhost = False
-        click.secho("Generating support bundle for the host {}".format(host), fg='green')
+        click.secho("\nGenerating support bundle for the host {}".format(host), fg='green')
         datagatherer_py3 = '/opt/pf9/hostagent/lib/python3.6/site-packages/datagatherer/datagatherer.py'
         datagatherer_py2 = '/opt/pf9/hostagent/lib/python2.7/site-packages/datagatherer/datagatherer.py'
         if os.path.isfile(datagatherer_py3):
@@ -181,19 +192,20 @@ class Log_Bundle:
                         click.secho("Sending the Support Bundle to Platform9",fg='green')
                         time.sleep(2)
                         self.upload_logs(du_url)
+                        self.upload_pf9cli_logs(du_url,host)
                         #else:
                         #click.secho("Logs not uploaded", fg='red')
                         # exit(0)
                     #else:
                     #    click.echo("Support Bundle Creation Failed,Sending pf9ctl logs to Platform9")
-                        # upload only pf9ctl logs
+                        # upload only pf9ctl logs 
                 except subprocess.CalledProcessError as except_err:
                     click.echo("Support Bundle Creation Failed:")
-                    # upload only pf9ctl logs
-
+                    # upload only pf9ctl logs 
+            
         else:
-        # Generating support Bundle for remote Host
-            click.secho("Generating support bundle for the host "+host+" via passwordless SSH")
+        # Generating support Bundle for remote Host 
+            click.secho("\nGenerating support bundle for the host "+host+" via passwordless SSH", fg="green")
             ssh_dir = os.path.join(os.path.expanduser("~"), '.ssh/id_rsa')
             user_name = getpass.getuser()
             ssh_conn = Connection(host=host,
@@ -213,15 +225,16 @@ class Log_Bundle:
                     click.secho("Sending the Support Bundle to Platform9",fg='green')
                     time.sleep(2)
                     self.remote_host_upload(du_url, ssh_conn, host)
+                    self.upload_pf9cli_logs(du_url,host)
                     break
 
 
                 except paramiko.ssh_exception.NoValidConnectionsError:
                         click.echo("Unable to communicate with: " + host)
                         sys.exit(1)
-                #If passwordless ssh is not configured to a host , ask for username and password to generate the bundle
+                #If passwordless ssh is not configured to a host , ask for username and password to generate the bundle          
                 except (paramiko.ssh_exception.SSHException,paramiko.ssh_exception.PasswordRequiredException,invoke.exceptions.AuthFailure) as err:
-                        click.secho("Password less SSH for the"+host+" didn't work.\nNeed credentials for the host")
+                        click.secho("\nPassword less SSH for the node: "+host+" didn't work.\nNeed credentials for the host",fg="red")
                         click.echo("\nAttempt [{}/3]".format(attempt))
                         click.echo("SSH Credentials for {}".format(host))
                         user_name = click.prompt("Username {}".format(user_name), default=user_name)
@@ -249,8 +262,9 @@ class Log_Bundle:
         host = socket.getfqdn()
         du_url = du_url.replace("https://","")
         filename = "/tmp/pf9-support.tgz"
+        
 #        filename = path.replace("Code: 4, output log: ","")
-        S3_location = "http://uploads.platform9.com.s3-us-west-1.amazonaws.com/"+str(du_url)+"/"+str(host)+"/"
+        S3_location = "https://sheda-pf9ctl-log-testing.s3-us-west-1.amazonaws.com/"+str(du_url)+"/"+str(host)+"/"
         try:
 #            f = open(filename)
 #            print ("\n")
@@ -266,23 +280,24 @@ class Log_Bundle:
         except Exception as e:
            click.secho(e)
            click.secho("File uploading failed with error\n")
-
-        return None
+        
+        return None 
 
 
 
     def remote_host_upload(self,du_url,ssh_conn,host):
-    # function to upload the logs from remote host to S3
-        S3_location = "http://uploads.platform9.com.s3-us-west-1.amazonaws.com/"+str(du_url)+"/"+str(host)+"/"
+    # function to upload the logs from remote host to S3  
         du_url = du_url.replace("https://","")
+        S3_location = "https://sheda-pf9ctl-log-testing.s3-us-west-1.amazonaws.com/"+str(du_url)+"/"+str(host)+"/"
+        
         filename = "/tmp/pf9-support.tgz"
-        try:
+        try: 
             click.secho("Uploading the log file & system information {} to {}\n".format(filename,S3_location),fg="green")
            # with Bar('Uploading', max=100) as bar:
            #     for i in range(100):
-            ssh_conn.sudo("curl -s -T /tmp/pf9-support.tgz http://uploads.platform9.com.s3-us-west-1.amazonaws.com/"+du_url+"/"+host+"/")
+            ssh_conn.sudo("curl -s -T /tmp/pf9-support.tgz https://sheda-pf9ctl-log-testing.s3-us-west-1.amazonaws.com/"+du_url+"/"+host+"/")         
            #          bar.next()
-            click.secho("\n Uploaded the files to S3\n")
+            
 
         except Exception as e:
             click.secho(e)
