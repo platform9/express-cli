@@ -16,9 +16,6 @@ from pf9.exceptions import DUCommFailure, CLIException, UserAuthFailure
 from pf9.modules.express import Get
 from pf9.modules.util import Utils, Logger, Pf9ExpVersion
 
-
-logger = Logger(os.path.join(os.path.expanduser("~"), 'pf9/log/pf9ctl.log')).get_logger(__name__)
-
 class Log_Bundle:
 
     def __init__(self,error_msg="none"):
@@ -98,7 +95,7 @@ class Log_Bundle:
                     else:
                         self.create_log_bundle(ctx,user,password,host)
                 else:
-                # if a valid uuid not found in resmgr from the host , hostganet is not installled and support bunndle cant be generated
+                # if a valid uuid not found in resmgr from the host , hostagent is not installed and support bundle cannot be generated
                 # uploading pf9ctl logs in this case
                     self.upload_pf9cli_logs (du_url,host)
 
@@ -132,7 +129,7 @@ class Log_Bundle:
             bundle_exec = 'python {}'.format(datagatherer_py3)
         if not host or host in ['localhost', '127.0.0.1']:
                 host = socket.getfqdn()
-#               Generating support bundle on localhost
+                ###Generating support bundle on localhost
                 subprocess.check_output(shlex.split("sudo " + bundle_exec))
                 check_bundle_out = subprocess.check_output(shlex.split("sudo ls -sh /tmp/pf9-support.tgz"))
                 if check_bundle_out:
@@ -147,31 +144,20 @@ class Log_Bundle:
             ssh_conn = Connection(host=host,
                                       user=user_name,
                                       port=22)
-#           attempt = 0
-#            while attempt < 3:
-#                attempt = attempt + 1
             try:
                 ssh_result_generate = ssh_conn.sudo(bundle_exec, hide='stderr')
                 ssh_result_bundle = ssh_conn.sudo('ls -sh /tmp/pf9-support.tgz', hide='stderr')
                 if ssh_result_generate.exited and ssh_result_bundle.exited:
                     ssh_conn.close()
-                click.echo("\n\n")
-                #click.echo("Generation of support bundle completed on Host: " + host +"\n")
-                #click.echo(ssh_result_bundle.stdout.strip())
                 time.sleep(2)
                 self.remote_host_upload(du_url, ssh_conn, host)
                 self.upload_pf9cli_logs(du_url,host)
 
-
-
             except paramiko.ssh_exception.NoValidConnectionsError:
                     self.upload_pf9cli_logs(du_url,host)
                     sys.exit(1)
-                #If passwordless ssh is not configured to a host , ask for username and password to generate the bundle
+                #If passwordless ssh is not configured to a host , use the username and password provided in the prep node command to generate the log bundle
             except (paramiko.ssh_exception.SSHException,paramiko.ssh_exception.PasswordRequiredException,invoke.exceptions.AuthFailure) as err:
-#                    click.secho("\nPassword less SSH for the node: "+host+" didn't work.\nNeed credentials for the host",fg="red")
-#                    click.echo("\nAttempt [{}/3]".format(attempt))
-#                    click.echo("SSH Credentials for {}".format(host))
                     user_name = user
                     password = password
                     ssh_auth = {"look_for_keys": "false", "password": password}
@@ -185,7 +171,6 @@ class Log_Bundle:
                         ssh_result_bundle = ssh_conn.sudo('ls -sh /tmp/pf9-support.tgz', hide='stderr')
                         if ssh_result_generate.exited and ssh_result_bundle.exited:
                            ssh_conn.close()
-                        click.echo("\n\n")
                         time.sleep(2)
                         self.remote_host_upload(du_url, ssh_conn, host)
                         self.upload_pf9cli_logs(du_url,host)
@@ -193,7 +178,6 @@ class Log_Bundle:
                         self.upload_pf9cli_logs(du_url,host)
 
         return None
-
 
 
     def upload_logs(self,du_url):
@@ -204,7 +188,6 @@ class Log_Bundle:
         S3_location = "https://sheda-pf9ctl-log-testing.s3-us-west-1.amazonaws.com/"+str(du_url)+"/"+str(host)+"/"
         cmd = subprocess.run(["curl", "-T", filename, S3_location])
         return None
-
 
 
     def remote_host_upload(self,du_url,ssh_conn,host):

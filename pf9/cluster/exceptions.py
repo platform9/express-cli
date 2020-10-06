@@ -36,8 +36,6 @@ class ClusterAttachFailed(ClusterCLIException):
         super(ClusterAttachFailed, self).__init__(msg)
 
 
-
-
 class ClusterNotAvailable(ClusterCLIException):
     def __init__(self, msg):
         super(ClusterNotAvailable, self).__init__(msg)

@@ -58,7 +58,6 @@ def prep_node(ctx, user, password, ssh_key, ips, node_prep_only):
             msg = "Code: {}, output log: {}".format(cmd_proc.returncode, log_file)
             raise PrepNodeFailed(msg,ctx,ips,user,password)
 
-
         return cmd_proc.returncode, log_file
 
 
@@ -574,3 +573,4 @@ def prepnode(ctx, user, password, ssh_key, ips, floating_ip):
         sys.exit(1)
     click.secho("Preparing the provided nodes to be added to Kubernetes cluster was successful",
                 fg="green")
+
