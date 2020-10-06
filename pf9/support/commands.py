@@ -101,7 +101,6 @@ def bundle():
 @click.pass_context
 def create(ctx, silent, host, offline, mgmt_plane):
     """Request Creation of a Platform9 Support"""
-    #Get(ctx).active_config()
     if offline and mgmt_plane:
         click.echo("--mgmt-plane and --offline are not mutually exclusive.\n"
                    "Only one may be set")
@@ -199,7 +198,6 @@ def create(ctx, silent, host, offline, mgmt_plane):
                 ssh_conn = Connection(host=host,
                                       user=user_name,
                                       port=22,
-
                                       connect_kwargs=ssh_auth,
                                       config=config)
 
