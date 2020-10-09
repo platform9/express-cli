@@ -56,7 +56,7 @@ def prep_node(ctx, user, password, ssh_key, ips, node_prep_only):
 
         if cmd_proc.returncode:
             msg = "Code: {}, output log: {}".format(cmd_proc.returncode, log_file)
-            raise PrepNodeFailed(msg,ctx,ips,user,password)
+            raise PrepNodeFailed(msg, ctx, ips, user, password)
 
         return cmd_proc.returncode, log_file
 

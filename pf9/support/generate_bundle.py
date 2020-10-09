@@ -21,31 +21,27 @@ class Log_Bundle:
     def __init__(self,error_msg="none"):
         self.error_msg = error_msg
 
-    def get_uuid_from_resmgr(self,du_url,host_ip,headers):
-    #Based on the host_ip this function would pull the host UUID from resmgr.
+    def get_uuid_from_resmgr(self, du_url, host_ip, headers):
+        #Based on the host_ip this function would pull the host UUID from resmgr.
         try:
             api_endpoint = "resmgr/v1/hosts"
-            pf9_response = requests.get("{}/{}".format(du_url,api_endpoint),
+            pf9_response = requests.get("{}/{}".format(du_url, api_endpoint),
                                         headers=headers)
             if pf9_response.status_code != 200:
                 return None
             # parse resmgr response
             json_response = json.loads(pf9_response.text)
-        except Exception as except_err:
-            logger.exception(except_err)
-            return None
-        # sequentially search resmgr response for the ip of the host, if the ip is found return host uuid
-        for host in json_response:
-            try:
+             # sequentially search resmgr response for the ip of the host, if the ip is found return host uuid
+            for host in json_response:
                 for iface_name, iface_ip in host['extensions']['interfaces']['data']['iface_ip'].items():
                     if iface_ip == host_ip:
-                        logger.info("Node host_id: {}".format(host['id']))
                         return host['id']
-            except Exception as e:
-                logger.exception(e)
+        except Exception:
+            return None
+            
         return None
 
-    def check_host_status(self,ctx,ips,user,password):
+    def check_host_status(self, ctx, ips, user, password):
         """ Check the status of the host in Resource manager , obtaing the UUID and verify the role and responding status """
         Get(ctx).active_config()
         du_url = ctx.params['du_url']
@@ -59,7 +55,7 @@ class Log_Bundle:
                 hostname=socket.gethostname()
                 ip=socket.gethostbyname(hostname)
             # get host uuid from resmgr using the ip of the localhost
-                host_uuid[ip]=self.get_uuid_from_resmgr(du_url,ip,headers)
+                host_uuid[ip]=self.get_uuid_from_resmgr(du_url, ip, headers)
 
                 if host_uuid[ip]:
                 # if a valid uuid is found , hostagent is configured and we can pull the support bundle from the host
@@ -71,17 +67,15 @@ class Log_Bundle:
                         if roles[0] == "pf9-kube" and data["info"]["responding"] == "true":  # Responding key will only be there is pf9-kube is installed else there will not be any responding key in response
                             pass
                         else:
-                            time.sleep(2)
-                            self.create_log_bundle(ctx,user,password,host)
+                            self.create_log_bundle(ctx, user, password, host)
                     else:
-                        time.sleep(2)
-                        self.create_log_bundle(ctx,user,password,host)
+                        self.create_log_bundle(ctx, user, password, host)
                 else:
-                    self.upload_pf9cli_logs (du_url,host)
+                    self.upload_pf9cli_logs (du_url, host)
 
             # host provided in not localhost, get host uuid from resmgr using the ip
             else:
-                host_uuid[host]=self.get_uuid_from_resmgr(du_url,host,headers)
+                host_uuid[host]=self.get_uuid_from_resmgr(du_url, host, headers)
                 if host_uuid[host]:
                     resmgr_endpoint = '{}/resmgr/v1/hosts/{}'.format(ctx.params['du_url'],host_uuid[host])
                     resmgr_get_hosts = requests.get(resmgr_endpoint,verify=False,headers=headers)
@@ -91,18 +85,18 @@ class Log_Bundle:
                         if roles[0] == "pf9-kube" and data["info"]["responding"] == "true": # Responding key will only be there is pf9-kube is installed else there will not be any responding key in response
                             pass
                         else:
-                            self.create_log_bundle(ctx,user,password,host)
+                            self.create_log_bundle(ctx, user, password, host)
                     else:
-                        self.create_log_bundle(ctx,user,password,host)
+                        self.create_log_bundle(ctx, user, password, host)
                 else:
                 # if a valid uuid not found in resmgr from the host , hostagent is not installed and support bundle cannot be generated
                 # uploading pf9ctl logs in this case
-                    self.upload_pf9cli_logs (du_url,host)
+                    self.upload_pf9cli_logs (du_url, host)
 
         return None
 
-    def upload_pf9cli_logs (self,du_url,host):
-    #function for uploading pf9cli logs in case support bundle cant be generated
+    def upload_pf9cli_logs (self, du_url, host):
+        #function for uploading pf9cli logs in case support bundle cant be generated
         log_path = str(self.error_msg)
         filename = log_path.split(":")[2].lstrip()
         cli_logs="/root/pf9/log/pf9ctl.log"
@@ -112,7 +106,7 @@ class Log_Bundle:
         cmd = subprocess.run(["curl", "-T", cli_logs, S3_location])
         return None
 
-    def create_log_bundle(self,ctx,user,password,host='none'):
+    def create_log_bundle(self, ctx, user, password, host='none'):
         #This function is used to generate the log bundle based on the host ip.
         Get(ctx).active_config()
         du_url = ctx.params['du_url']
@@ -135,10 +129,10 @@ class Log_Bundle:
                 if check_bundle_out:
                     time.sleep(2)
                     self.upload_logs(du_url)
-                    self.upload_pf9cli_logs(du_url,host)
+                    self.upload_pf9cli_logs(du_url, host)
 
         else:
-        # Generating support Bundle for remote Host
+            # Generating support Bundle for remote Host
             ssh_dir = os.path.join(os.path.expanduser("~"), '.ssh/id_rsa')
             user_name = getpass.getuser()
             ssh_conn = Connection(host=host,
@@ -151,10 +145,10 @@ class Log_Bundle:
                     ssh_conn.close()
                 time.sleep(2)
                 self.remote_host_upload(du_url, ssh_conn, host)
-                self.upload_pf9cli_logs(du_url,host)
+                self.upload_pf9cli_logs(du_url, host)
 
             except paramiko.ssh_exception.NoValidConnectionsError:
-                    self.upload_pf9cli_logs(du_url,host)
+                    self.upload_pf9cli_logs(du_url, host)
                     sys.exit(1)
                 #If passwordless ssh is not configured to a host , use the username and password provided in the prep node command to generate the log bundle
             except (paramiko.ssh_exception.SSHException,paramiko.ssh_exception.PasswordRequiredException,invoke.exceptions.AuthFailure) as err:
@@ -173,15 +167,15 @@ class Log_Bundle:
                            ssh_conn.close()
                         time.sleep(2)
                         self.remote_host_upload(du_url, ssh_conn, host)
-                        self.upload_pf9cli_logs(du_url,host)
+                        self.upload_pf9cli_logs(du_url, host)
                     except (paramiko.ssh_exception.SSHException,paramiko.ssh_exception.PasswordRequiredException,invoke.exceptions.AuthFailure) as err:
-                        self.upload_pf9cli_logs(du_url,host)
+                        self.upload_pf9cli_logs(du_url, host)
 
         return None
 
 
-    def upload_logs(self,du_url):
-    #function to upload the logs from the localhost to S3
+    def upload_logs(self, du_url):
+        #function to upload the logs from the localhost to S3
         host = socket.getfqdn()
         du_url = du_url.replace("https://","")
         filename = "/tmp/pf9-support.tgz"
@@ -190,8 +184,8 @@ class Log_Bundle:
         return None
 
 
-    def remote_host_upload(self,du_url,ssh_conn,host):
-    # function to upload the logs from remote host to S3
+    def remote_host_upload(self, du_url, ssh_conn, host):
+        # function to upload the logs from remote host to S3
         du_url = du_url.replace("https://","")
         S3_location = "https://sheda-pf9ctl-log-testing.s3-us-west-1.amazonaws.com/"+str(du_url)+"/"+str(host)+"/"
         filename = "/tmp/pf9-support.tgz"

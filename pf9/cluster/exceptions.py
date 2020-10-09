@@ -32,7 +32,7 @@ class ClusterCreateFailed(ClusterCLIException):
 
 
 class ClusterAttachFailed(ClusterCLIException):
-    def __init__(self, msg,ctx,host):
+    def __init__(self, msg):
         super(ClusterAttachFailed, self).__init__(msg)
 
 
@@ -52,10 +52,10 @@ class FailedActiveMasters(ClusterCLIException):
 
 
 class PrepNodeFailed(ClusterCLIException):
-    def __init__(self,msg,ctx,ips,user,password):
+    def __init__(self, msg, ctx, ips, user, password):
         super(PrepNodeFailed, self).__init__(msg)
         support = Log_Bundle(msg)
-        support.check_host_status(ctx,ips,user,password) 
+        support.check_host_status(ctx, ips, user, password) 
 
 
 class UserAuthFailure(CLIException):

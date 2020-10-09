@@ -171,7 +171,7 @@ def create(ctx, silent, host, offline, mgmt_plane):
                 log_upload_s3 = Log_Bundle()
                 Get(ctx).active_config()
                 du_url = ctx.params['du_url']
-                log_upload_s3.remote_host_upload(du_url,ssh_conn,host)
+                log_upload_s3.remote_host_upload(du_url, ssh_conn, host)
                 click.echo(ssh_result_bundle.stdout.strip())
                 # I don't like this exit point
                 # needs to return to bottom
