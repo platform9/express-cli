@@ -349,7 +349,7 @@ install_prereqs() {
             fi
         done
         # Install python3-distutils only for 18.04
-        if [[ "$VERSION_ID" != "20.04" ]] || [[ "$VERSION_ID" == "18.04" ]]; then
+        if [[ "$VERSION_ID" == "20.04" ]] || [[ "$VERSION_ID" == "18.04" ]]; then
             sudo apt-get -y install python3-distutils >> ${log_file} 2>&1
             if [ $? -ne 0 ]; then
                 echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
