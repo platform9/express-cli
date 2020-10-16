@@ -33,9 +33,15 @@ class Log_Bundle:
             json_response = json.loads(pf9_response.text)
              # sequentially search resmgr response for the ip of the host, if the ip is found return host uuid
             for host in json_response:
-                for iface_name, iface_ip in host['extensions']['interfaces']['data']['iface_ip'].items():
-                    if iface_ip == host_ip:
-                        return host['id']
+                try:
+                    for iface_name, iface_ip in host['extensions']['interfaces']['data']['iface_ip'].items():
+                        if iface_ip == host_ip:
+                            return host['id']
+                except Exception:
+                    # For future logging
+                    # Currently this try/except block is to ensure that we itterate through entire list of host
+                    pass
+
         except Exception:
             return None
             
@@ -60,7 +66,7 @@ class Log_Bundle:
                 if host_uuid[ip]:
                 # if a valid uuid is found , hostagent is configured and we can pull the support bundle from the host
                     resmgr_endpoint = '{}/resmgr/v1/hosts/{}'.format(ctx.params['du_url'],host_uuid[ip])
-                    resmgr_get_hosts = requests.get(resmgr_endpoint,verify=False,headers=headers)
+                    resmgr_get_hosts = requests.get(resmgr_endpoint, headers=headers)
                     data = resmgr_get_hosts.json()
                     roles = (data["roles"])
                     if len(roles) >= 1 :
@@ -78,7 +84,7 @@ class Log_Bundle:
                 host_uuid[host]=self.get_uuid_from_resmgr(du_url, host, headers)
                 if host_uuid[host]:
                     resmgr_endpoint = '{}/resmgr/v1/hosts/{}'.format(ctx.params['du_url'],host_uuid[host])
-                    resmgr_get_hosts = requests.get(resmgr_endpoint,verify=False,headers=headers)
+                    resmgr_get_hosts = requests.get(resmgr_endpoint, headers=headers)
                     data = resmgr_get_hosts.json()
                     roles = (data["roles"])
                     if len(roles) >= 1:
@@ -101,9 +107,10 @@ class Log_Bundle:
         filename = log_path.split(":")[2].lstrip()
         cli_logs="/root/pf9/log/pf9ctl.log"
         du_url = du_url.replace("https://","")
-        S3_location = "https://sheda-pf9ctl-log-testing.s3-us-west-1.amazonaws.com/"+str(du_url)+"/"+str(host)+"/"
-        cmd = subprocess.run(["curl", "-T", filename, S3_location])
-        cmd = subprocess.run(["curl", "-T", cli_logs, S3_location])
+        header = 'x-amz-acl:bucket-owner-full-control'
+        S3_location = "https://s3-us-west-2.amazonaws.com/loguploads.platform9.com/"+str(du_url)+"/"+str(host)+"/"
+        cmd = subprocess.run(["curl", "-T", filename, "-H", header, S3_location])
+        cmd = subprocess.run(["curl", "-T", cli_logs, "-H", header, S3_location])
         return None
 
     def create_log_bundle(self, ctx, user, password, host='none'):
@@ -140,7 +147,7 @@ class Log_Bundle:
                                       port=22)
             try:
                 ssh_result_generate = ssh_conn.sudo(bundle_exec, hide='stderr')
-                ssh_result_bundle = ssh_conn.sudo('ls -sh /tmp/pf9-support.tgz', hide='stderr')
+                ssh_result_bundle = ssh_conn.sudo('ls -sh /tmp/pf9-support.tgz > /dev/null 2>&1', hide='stderr')
                 if ssh_result_generate.exited and ssh_result_bundle.exited:
                     ssh_conn.close()
                 time.sleep(2)
@@ -162,7 +169,7 @@ class Log_Bundle:
                                               port=22,
                                               connect_kwargs=config)
                         ssh_result_generate = ssh_conn.sudo(bundle_exec, hide='stderr')
-                        ssh_result_bundle = ssh_conn.sudo('ls -sh /tmp/pf9-support.tgz', hide='stderr')
+                        ssh_result_bundle = ssh_conn.sudo('ls -sh /tmp/pf9-support.tgz > /dev/null 2>&1', hide='stderr')
                         if ssh_result_generate.exited and ssh_result_bundle.exited:
                            ssh_conn.close()
                         time.sleep(2)
@@ -179,15 +186,16 @@ class Log_Bundle:
         host = socket.getfqdn()
         du_url = du_url.replace("https://","")
         filename = "/tmp/pf9-support.tgz"
-        S3_location = "https://sheda-pf9ctl-log-testing.s3-us-west-1.amazonaws.com/"+str(du_url)+"/"+str(host)+"/"
-        cmd = subprocess.run(["curl", "-T", filename, S3_location])
+        header = 'x-amz-acl:bucket-owner-full-control'
+        S3_location = "https://s3-us-west-2.amazonaws.com/loguploads.platform9.com/"+str(du_url)+"/"+str(host)+"/"
+        cmd = subprocess.run(["curl", "-T", filename, "-H", header, S3_location])
         return None
 
 
     def remote_host_upload(self, du_url, ssh_conn, host):
         # function to upload the logs from remote host to S3
         du_url = du_url.replace("https://","")
-        S3_location = "https://sheda-pf9ctl-log-testing.s3-us-west-1.amazonaws.com/"+str(du_url)+"/"+str(host)+"/"
-        filename = "/tmp/pf9-support.tgz"
-        ssh_conn.sudo("curl -s -T /tmp/pf9-support.tgz https://sheda-pf9ctl-log-testing.s3-us-west-1.amazonaws.com/"+du_url+"/"+host+"/")
+        S3_location = "https://s3-us-west-2.amazonaws.com/loguploads.platform9.com/"+str(du_url)+"/"+str(host)+"/"
+        ssh_conn.sudo("curl -s -T /tmp/pf9-support.tgz -H 'x-amz-acl:bucket-owner-full-control' https://s3-us-west-2.amazonaws.com/loguploads.platform9.com/"+du_url+"/"+host+"/")
         return None
+        
