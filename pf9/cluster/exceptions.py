@@ -2,6 +2,7 @@
 Exceptions for Cluster Operations
 """
 from ..exceptions import CLIException
+from pf9.support.generate_bundle import Log_Bundle
 
 
 class ClusterCLIException(CLIException):
@@ -51,8 +52,10 @@ class FailedActiveMasters(ClusterCLIException):
 
 
 class PrepNodeFailed(ClusterCLIException):
-    def __init__(self, msg):
+    def __init__(self, msg, ctx, ips, user, password):
         super(PrepNodeFailed, self).__init__(msg)
+        support = Log_Bundle(msg)
+        support.check_host_status(ctx, ips, user, password) 
 
 
 class UserAuthFailure(CLIException):
