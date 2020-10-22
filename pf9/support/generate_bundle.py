@@ -11,7 +11,6 @@ import paramiko.ssh_exception
 import socket
 import invoke.exceptions
 import time
-from progress.bar import Bar
 from pf9.exceptions import DUCommFailure, CLIException, UserAuthFailure
 from pf9.modules.express import Get
 from pf9.modules.util import Utils, Logger, Pf9ExpVersion
