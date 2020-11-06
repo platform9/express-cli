@@ -143,14 +143,18 @@ parse_args() {
 
 init_venv_python() {
     debugging "Virtualenv: ${venv} doesn't not exist, Configuring."
-    for ver in {3,2,''}; do #ensure python3 is first
-	debugging "Checking Python${ver}: $(which python${ver})"
-        if (which python${ver} > /dev/null 2>&1); then
-	    python_version="$(python${ver} <<< 'import sys; print(sys.version_info[0])')"
-	    stdout_log "Python Version Selected: python${python_version}"
-	    break
-        fi
-    done
+    if [[ ${platform} == 'centos' ]]; then
+        python_version=2
+    else
+        for ver in {3,2,''}; do #ensure python3 is first
+        debugging "Checking Python${ver}: $(which python${ver})"
+            if (which python${ver} > /dev/null 2>&1); then
+            python_version="$(python${ver} <<< 'import sys; print(sys.version_info[0])')"
+            stdout_log "Python Version Selected: python${python_version}"
+            break
+            fi
+        done
+    fi
 
     if [[ ${python_version} == 2 ]]; then
         pyver="";
@@ -325,6 +329,7 @@ validate_platform() {
   if [[ "${LANG}" != *"UTF-8"* ]]; then
     stdout_log "Warning: Expected unicode supported locale like en_US.UTF-8 but found ${LANG}. CLI Installation may fail"
   fi
+  echo ${platform}
 }
 
 install_prereqs() {
@@ -386,7 +391,7 @@ parse_args "$@"
 initialize_basedir
 
 # Validate & install system packages
-validate_platform
+platform=$(validate_platform)
 install_prereqs
 
 debugging "CLFs: $*"
