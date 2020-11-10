@@ -15,6 +15,12 @@ from pf9.exceptions import DUCommFailure, CLIException, UserAuthFailure
 from pf9.modules.express import Get
 from pf9.modules.util import Utils, Logger, Pf9ExpVersion
 
+try:
+    from subprocess import DEVNULL # py3k
+except ImportError:
+    import os
+    DEVNULL = open(os.devnull, 'wb')
+
 class Log_Bundle:
 
     def __init__(self,error_msg="none"):
@@ -43,7 +49,7 @@ class Log_Bundle:
 
         except Exception:
             return None
-            
+
         return None
 
     def check_host_status(self, ctx, ips, user, password):
@@ -108,8 +114,8 @@ class Log_Bundle:
         du_url = du_url.replace("https://","")
         header = 'x-amz-acl:bucket-owner-full-control'
         S3_location = "https://s3-us-west-2.amazonaws.com/loguploads.platform9.com/"+str(du_url)+"/"+str(host)+"/"
-        cmd = subprocess.run(["curl", "-T", filename, "-H", header, S3_location])
-        cmd = subprocess.run(["curl", "-T", cli_logs, "-H", header, S3_location])
+        cmd = subprocess.call(["curl", "-T", filename, "-H", header, S3_location], stdout=DEVNULL, stderr=DEVNULL)
+        cmd = subprocess.call(["curl", "-T", cli_logs, "-H", header, S3_location], stdout=DEVNULL, stderr=DEVNULL)
         return None
 
     def create_log_bundle(self, ctx, user, password, host='none'):
@@ -187,7 +193,7 @@ class Log_Bundle:
         filename = "/tmp/pf9-support.tgz"
         header = 'x-amz-acl:bucket-owner-full-control'
         S3_location = "https://s3-us-west-2.amazonaws.com/loguploads.platform9.com/"+str(du_url)+"/"+str(host)+"/"
-        cmd = subprocess.run(["curl", "-T", filename, "-H", header, S3_location])
+        cmd = subprocess.call(["curl", "-T", filename, "-H", header, S3_location], stdout=DEVNULL, stderr=DEVNULL))
         return None
 
 
@@ -197,4 +203,3 @@ class Log_Bundle:
         S3_location = "https://s3-us-west-2.amazonaws.com/loguploads.platform9.com/"+str(du_url)+"/"+str(host)+"/"
         ssh_conn.sudo("curl -s -T /tmp/pf9-support.tgz -H 'x-amz-acl:bucket-owner-full-control' https://s3-us-west-2.amazonaws.com/loguploads.platform9.com/"+du_url+"/"+host+"/")
         return None
-        
