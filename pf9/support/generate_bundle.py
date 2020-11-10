@@ -193,7 +193,7 @@ class Log_Bundle:
         filename = "/tmp/pf9-support.tgz"
         header = 'x-amz-acl:bucket-owner-full-control'
         S3_location = "https://s3-us-west-2.amazonaws.com/loguploads.platform9.com/"+str(du_url)+"/"+str(host)+"/"
-        cmd = subprocess.call(["curl", "-T", filename, "-H", header, S3_location], stdout=DEVNULL, stderr=DEVNULL))
+        cmd = subprocess.call(["curl", "-T", filename, "-H", header, S3_location], stdout=DEVNULL, stderr=DEVNULL)
         return None
 
 
