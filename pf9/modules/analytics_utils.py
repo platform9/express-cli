@@ -51,6 +51,7 @@ class SegmentSessionWrapper:
         segment_event_properties = self.ctx.params["segment_event_properties"]
         segment_event_properties.update(du_account_url=strip_account_url(self.ctx.params['du_url']))
         segment_event_properties.update(keystone_user_id=self.ctx.params['user_id'])
+        segment_event_properties.update(email=self.ctx.params['du_username'])
         self.ctx.params["segment_event_properties"] = segment_event_properties
 
         # dev_key and disable_analytics needs to be reloaded after active_config is loaded to context
