@@ -130,6 +130,10 @@ parse_args() {
                 PF9_TENANT=${2}
                 shift 2
                 ;;
+            --skip-checks)
+                skip_checks="true"
+                shift
+                ;;
             *)
                 echo "${1} is not a valid command line option."
                 echo ""
@@ -376,6 +380,26 @@ install_prereqs() {
     fi
 }
 
+show_sudo_notice() {
+
+    # If tty is present, then prompt for confirmation
+    if [[ "${TTY_AVAILABLE}" == "true" && "${skip_checks}" == "false" ]]; then
+        read -p "SUDO Requirements: The CLI requires SUDO privileges to operate correctly. Confirm your user has SUDO privileges (yes/no): " yn
+        case $yn in
+            [Yy]* )
+                return 0
+                ;;
+            [Nn]* )
+                echo "Setup your user to have SUDO privileges and rerun this step"
+                exit 0
+                ;;
+            *) echo "Please answer yes or no."; exit 1;;
+        esac
+    else
+        stdout_log "** NOTE ** - SUDO Requirements: The CLI requires SUDO privileges to operate correctly. Please ensure your account has SUDO privileges."
+    fi
+}
+
 ## main
 
 # Set the path so double quotes don't use the litteral '~'
@@ -384,14 +408,23 @@ log_file=${pf9_basedir}/log/cli_install.log
 pf9_bin=${pf9_basedir}/bin
 venv="${pf9_basedir}/pf9-venv"
 pf9_state_dirs="${pf9_bin} ${venv} ${pf9_basedir}/db ${pf9_basedir}/log"
+skip_checks="false"
 
 parse_args "$@"
+
+TTY_AVAILABLE="true"
+tty -s
+if [[ $? != "0" ]]; then
+    debugging "No TTY available. Skipping all prompts..."
+    TTY_AVAILABLE="false"
+fi
 
 # initialize installation directory
 initialize_basedir
 
 # Validate & install system packages
 platform=$(validate_platform)
+show_sudo_notice
 install_prereqs
 
 debugging "CLFs: $*"
@@ -477,12 +510,16 @@ setup_pf9_bash_profile
 if [[ ${bash_config} ]]; then
     eval source "${bash_config}"
 fi
+
 if ! [[ -n ${install_only} ]]; then
     # call cli config create which will prompt user to provide PF9 credentials.
     create_cli_config
 fi
 echo ""
 stdout_log "Platform9 CLI installation completed successfully"
+echo ""
+stdout_log "** SUDO REQUIRED FOR ALL COMMANDS **"
+stdout_log "Why is SUDO required?: The CLI performs operations like installing packages and configuring services. These require SUDO privileges to run successfully."
 echo ""
 echo "To start building a Kubernetes cluster you can execute:"
 echo "        ${cli_exec} cluster --help"
