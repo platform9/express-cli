@@ -365,6 +365,14 @@ install_prereqs() {
                 tail -10 ${log_file}; exit 1
             fi
         fi
+        # Install python3-dev only for WSL
+        if cat /proc/version | grep -q 'microsoft'; then
+            sudo apt-get -y install python3-dev >> ${log_file} 2>&1
+            if [ $? -ne 0 ]; then
+                echo -e "\nERROR: failed to install ${pkg} - here's the last 10 lines of the log:\n"
+                tail -10 ${log_file}; exit 1
+            fi
+        fi	
     elif [[ "$ID" == "centos" ]]; then
         sudo rpm -Uvh https://download.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
         for pkg in git haveged sshpass; do
