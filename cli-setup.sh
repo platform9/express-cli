@@ -460,7 +460,7 @@ debugging "cli_url: ${cli_url}"
 pip_path=${pf9_basedir}/get_pip.py
 venv_python="${venv}/bin/python"
 venv_activate="${venv}/bin/activate"
-pip_url="https://bootstrap.pypa.io/get-pip.py"
+pip_url="https://bootstrap.pypa.io/2.7/get-pip.py"
 cli_entrypoint=$(dirname ${venv_python})/express
 cli_exec=${pf9_bin}/pf9ctl
 pf9_bash_profile=${pf9_bin}/pf9-bash-profile.sh
