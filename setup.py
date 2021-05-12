@@ -67,7 +67,7 @@ setup(
     zip_safe=False,
     keywords='cli',
     packages=find_packages(exclude=['docs', 'tests*']),
-    install_requires=['click',
+    install_requires=['click==7.1.2',
                       'cryptography==3.2.1',
                       'prettytable',
                       'requests',
