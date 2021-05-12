@@ -466,6 +466,7 @@ cli_exec=${pf9_bin}/pf9ctl
 pf9_bash_profile=${pf9_bin}/pf9-bash-profile.sh
 local_pip=$(dirname ~/.)/.local/bin/pip
 local_virtualenv=$(dirname ~/.)/.local/bin/virtualenv
+upper_constraints="https://raw.githubusercontent.com/platform9/express-cli/master/upper-constraints.txt"
 
 # configure python virtual environment
 debugging "Configuring virtualenv"
@@ -478,12 +479,12 @@ fi
 stdout_log "Upgrading pip"
 # Fix setuptools to be below a certain version to workaround this issue
 # https://github.com/pypa/setuptools/issues/2352
-if ! (${venv_python} -m pip install --upgrade --ignore-installed pip "setuptools<50.0" wheel >> ${log_file} 2>&1); then
+if ! (${venv_python} -m pip install --upgrade -c ${upper_constraints} --ignore-installed pip "setuptools<50.0" wheel >> ${log_file} 2>&1); then
     assert "Pip upgrade failed"; fi
 debugging "pip install express-cli completed"
 
 stdout_log "Installing Platform9 CLI"
-if ! (${venv_python} -m pip install --upgrade --ignore-installed ${cli_url} >> ${log_file} 2>&1); then
+if ! (${venv_python} -m pip install --upgrade -c ${upper_constraints} --ignore-installed ${cli_url} >> ${log_file} 2>&1); then
     assert "Installation of Platform9 CLI Failed"; fi
 
 if ! (${cli_entrypoint} --help >> ${log_file} 2>&1); then
