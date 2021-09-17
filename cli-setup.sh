@@ -478,7 +478,7 @@ fi
 stdout_log "Upgrading pip"
 # Fix setuptools to be below a certain version to workaround this issue
 # https://github.com/pypa/setuptools/issues/2352
-if ! (${venv_python} -m pip install --upgrade --ignore-installed pip "setuptools<50.0" wheel >> ${log_file} 2>&1); then
+if ! (${venv_python} -m pip install --upgrade pip "setuptools<50.0" wheel >> ${log_file} 2>&1); then
     assert "Pip upgrade failed"; fi
 debugging "pip install express-cli completed"
 
