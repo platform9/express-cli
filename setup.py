@@ -76,7 +76,7 @@ setup(
                       'urllib3',
                       'paramiko',
                       'fabric',
-                      'invoke',
+                      'invoke==1.6.0',
                       'ansible==2.9.13',
                       'analytics-python'
                       ],
