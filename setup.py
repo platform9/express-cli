@@ -77,7 +77,7 @@ setup(
                       'paramiko',
                       'fabric',
                       'invoke==1.6.0',
-                      'ansible==2.9.13',
+                      'ansible==4.2.0',
                       'analytics-python'
                       ],
     extras_require={
